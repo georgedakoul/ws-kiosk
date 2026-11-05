@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0051FD">
+<meta name="robots" content="noindex">
+<title>Renfluence | Web Summit Lisbon 2026</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root {
+  --blue: #0051FD; --blue-ink: #0040C9; --bg: #EEF3FF; --line: #D3DDF6;
+  --ink: #0D1830; --muted: #46536F; --white: #fff; --amber: #E59A00; --green: #1BA568; --red: #C8283C;
+  --r: 14px;
+  font-family: "Helvetica Neue", Helvetica, Roboto, Arial, system-ui, sans-serif;
+  color: var(--ink); background: var(--bg);
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body {
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+  font-size: 20px; line-height: 1.45;
+}
+input { user-select: text; -webkit-user-select: text; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; touch-action: manipulation; }
+[hidden] { display: none !important; }
+
+.screen { position: fixed; inset: 0; display: flex; flex-direction: column; animation: in .28s ease-out; }
+@keyframes in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .screen { animation: none; } }
+
+.btn {
+  min-height: 64px; padding: 0 36px; border-radius: var(--r); font-size: 22px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; transition: transform .1s, background .15s;
+}
+.btn:active { transform: scale(.98); }
+.btn-primary { background: var(--blue); color: var(--white); }
+.btn-primary:active { background: var(--blue-ink); }
+.btn-primary:disabled { background: #A9BDEB; }
+.btn-ghost { color: var(--muted); padding: 0 20px; }
+
+/* Welcome */
+#welcome { flex-direction: row; }
+.brand {
+  flex: 0 0 38%; background: var(--blue); color: var(--white); padding: 56px 48px;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.brand img { width: 240px; height: auto; }
+.brand p { font-size: 36px; font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
+.welcome-body { flex: 1; overflow-y: auto; padding: 56px 64px 40px; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
+.welcome-body h1 { font-size: 52px; line-height: 1.05; letter-spacing: -.02em; }
+.tagline { font-size: 24px; color: var(--blue); font-weight: 600; margin-top: 8px; }
+.intro { font-size: 21px; color: var(--muted); max-width: 46ch; }
+.features h2 { font-size: 16px; font-weight: 700; color: var(--blue); margin-bottom: 4px; }
+.features ul { list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
+.features li { border-top: 1px solid var(--line); padding: 14px 0; font-size: 17px; color: var(--muted); line-height: 1.4; }
+.features b { display: block; color: var(--ink); font-size: 19px; margin-bottom: 2px; }
+.start { display: flex; align-items: center; gap: 28px; }
+.start .btn { min-width: 220px; }
+.small { font-size: 16px; color: var(--muted); max-width: 40ch; }
+
+/* Question and details screens */
+.bar { display: flex; align-items: center; justify-content: space-between; padding: 24px 48px; }
+.bar img { height: 30px; width: auto; }
+.count { font-size: 17px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stage { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 48px 24px; display: grid; grid-template-columns: 34% 1fr; gap: 48px; align-items: start; align-content: start; }
+.stage h1 { font-size: 40px; line-height: 1.12; letter-spacing: -.015em; }
+.help { font-size: 20px; color: var(--muted); margin-top: 14px; }
+.options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.options.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.options.cols1 { grid-template-columns: 1fr; }
+.opt {
+  min-height: 76px; padding: 14px 20px 14px 60px; border-radius: var(--r); background: var(--white);
+  border: 2px solid var(--line); text-align: left; position: relative; transition: background .15s, border-color .15s, opacity .15s;
+}
+.opt::before {
+  content: ""; position: absolute; left: 20px; top: 50%; width: 24px; height: 24px; margin-top: -12px;
+  border: 2px solid #9FB2DA; border-radius: 50%; background: var(--white);
+}
+.multi .opt::before { border-radius: 7px; }
+.opt::after {
+  content: ""; position: absolute; left: 29px; top: 50%; width: 6px; height: 12px; margin-top: -9px;
+  border: solid var(--blue); border-width: 0 3px 3px 0; transform: rotate(45deg); opacity: 0;
+}
+.opt .main { display: block; font-size: 21px; font-weight: 650; line-height: 1.25; }
+.opt .sub { display: block; font-size: 16px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+.opt[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: var(--white); }
+.opt[aria-pressed="true"] .sub { color: #DCE6FF; }
+.opt[aria-pressed="true"]::before { border-color: var(--white); }
+.opt[aria-pressed="true"]::after { opacity: 1; }
+.opt:disabled { opacity: .4; }
+.opt:active:not(:disabled) { transform: scale(.99); }
+.nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 48px 28px; gap: 16px; }
+.nav .btn-primary { min-width: 200px; }
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label { font-size: 18px; font-weight: 650; }
+.field label span { font-weight: 400; color: var(--muted); }
+.field input[type=text], .field input[type=email], .field input[type=tel] {
+  height: 64px; border-radius: var(--r); border: 2px solid var(--line); background: var(--white);
+  padding: 0 18px; font: inherit; font-size: 22px; color: var(--ink); outline: none;
+}
+.field input:focus { border-color: var(--blue); }
+.field.bad input { border-color: var(--red); }
+.err { font-size: 16px; color: var(--red); min-height: 1.3em; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+.consent { grid-column: 1 / -1; display: flex; gap: 16px; align-items: flex-start; padding: 16px 18px; border-radius: var(--r); background: var(--white); border: 2px solid var(--line); font-size: 19px; }
+.consent input { width: 30px; height: 30px; flex: none; accent-color: var(--blue); margin-top: 0; }
+.consent.bad { border-color: var(--red); }
+
+/* Thank you */
+#thanks { align-items: center; justify-content: center; text-align: center; background: var(--blue); color: var(--white); padding: 48px; gap: 24px; }
+#thanks img { width: 220px; height: auto; margin-bottom: 24px; }
+#thanks h1 { font-size: 64px; letter-spacing: -.02em; line-height: 1.05; }
+#thanks p { font-size: 28px; max-width: 36ch; color: #E4ECFF; }
+
+#dot {
+  position: fixed; right: 12px; bottom: 10px; z-index: 5; min-width: 10px; height: 10px; border-radius: 6px;
+  background: var(--green); opacity: .7; font-size: 12px; line-height: 18px; font-weight: 700; color: var(--white); pointer-events: none;
+}
+#dot.offline { background: #8C97AD; }
+#dot.queued { background: var(--amber); height: 18px; min-width: 18px; border-radius: 9px; padding: 0 5px; text-align: center; opacity: 1; }
+
+@media (orientation: portrait) {
+  #welcome { flex-direction: column; }
+  .brand { flex: 0 0 30%; padding: 48px; }
+  .brand p { font-size: 32px; }
+  .welcome-body { padding: 48px; gap: 36px; }
+  .stage { grid-template-columns: 1fr; gap: 32px; padding-top: 16px; }
+  .options:not(.cols3) { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<section id="welcome" class="screen">
+  <div class="brand">
+    <img src="logo-white.png" alt="Renfluence">
+    <p>Web Summit<br>Lisbon 2026</p>
+  </div>
+  <div class="welcome-body">
+    <div>
+      <h1>Creator intelligence</h1>
+      <p class="tagline">Where Content Meets Clarity.</p>
+    </div>
+    <p class="intro">We watch the video itself and benchmark it in your market. Tell us about your work in about a minute, and we'll show you what Renfluence sees for you.</p>
+    <div class="features">
+      <h2>What Renfluence can do for you</h2>
+      <ul>
+        <li><b>Know what to make</b>The content types and formats that work in your category and market, before you brief.</li>
+        <li><b>Pick the right creators</b>Vetted on what they actually deliver, who watches them and who they've worked with.</li>
+        <li><b>See what competitors run</b>Which creators they use, where they pay, and where they leave gaps.</li>
+        <li><b>Prove what worked</b>Every campaign post tracked, Stories included, with audience reaction and client-ready reports.</li>
+      </ul>
+    </div>
+    <div class="start">
+      <button class="btn btn-primary" id="start">Start</button>
+      <p class="small">8 quick taps and your details. We use them only to follow up on this conversation.</p>
+    </div>
+  </div>
+</section>
+
+<section id="question" class="screen" hidden>
+  <div class="bar"><img src="logo-blue.png" alt="Renfluence"><span class="count" id="count"></span></div>
+  <div class="stage">
+    <div><h1 id="q-title"></h1><p class="help" id="q-help"></p></div>
+    <div id="q-body"></div>
+  </div>
+  <div class="nav">
+    <button class="btn btn-ghost" id="back">Back</button>
+    <button class="btn btn-primary" id="next">Next</button>
+  </div>
+</section>
+
+<form id="details" class="screen" hidden novalidate>
+  <div class="bar"><img src="logo-blue.png" alt="Renfluence"><span class="count">Last step</span></div>
+  <div class="stage">
+    <div><h1>Where should we send what we show you?</h1></div>
+    <div class="fields">
+      <div class="field"><label for="f-name">Full name</label><input id="f-name" name="name" type="text" autocomplete="off" autocapitalize="words"><span class="err"></span></div>
+      <div class="field"><label for="f-company">Company</label><input id="f-company" name="company" type="text" autocomplete="off"><span class="err"></span></div>
+      <div class="field"><label for="f-email">Work email</label><input id="f-email" name="email" type="email" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="err"></span></div>
+      <div class="field"><label for="f-phone">Phone <span>(optional)</span></label><input id="f-phone" name="phone" type="tel" autocomplete="off"><span class="err"></span></div>
+      <label class="consent" id="consent-box"><input id="f-consent" name="consent" type="checkbox"><span>I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.</span></label>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="btn btn-ghost" type="button" id="details-back">Back</button>
+    <button class="btn btn-primary" type="submit">Send</button>
+  </div>
+</form>
+
+<section id="thanks" class="screen" hidden>
+  <img src="logo-white.png" alt="Renfluence">
+  <h1 id="thanks-title"></h1>
+  <p id="thanks-line"></p>
+</section>
+
+<div id="dot" aria-hidden="true"></div>
+
+<script>
+'use strict';
+// Posts to the public Google Form "Web Summit 2026 kiosk form". The Sheet behind it scores and routes.
+const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScx6NdDuICiac0nrjsDN2XPvW4OUvNpEnW6bKqJBbIdFcmE5A/formResponse';
+const params = new URLSearchParams(location.search);
+// ?idle=5&thanks=3 shortens the timers (seconds) for testing.
+const IDLE_MS = (+params.get('idle') || 90) * 1000;
+const THANKS_MS = (+params.get('thanks') || 25) * 1000;
+const RETRY_MS = 30000, SEND_TIMEOUT_MS = 20000, QUEUE_KEY = 'ws-kiosk-queue';
+const CONSENT = "I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.";
+const VOLUME = ['1 to 3', '4 to 10', 'More than 10'];
+
+const QUESTIONS = [
+  { id: 'type', entry: '1697022334', title: 'Which best describes you?', help: 'Choose one, or two if both apply.', multi: true, max: 2, options: [
+    'Agency (creative, social, media or influencer)', 'Brand (in-house marketing, content or social)',
+    'Government or public body (communications offices and public organisations)',
+    'Tech or reseller partner (you build or resell marketing technology)', 'Creator (you make the content yourself)', 'Something else'] },
+  { id: 'role', entry: '1788746037', title: 'What is your role?', options: [
+    'Founder, owner or CEO', 'Director or Head of', 'Manager or lead', 'Specialist or executive', 'Something else'] },
+  { id: 'use', entry: '1783443947', title: 'Who would you use it for?', help: 'Choose all that apply.', multi: true, cols: 1, options: [
+    'Our own brand or work (your content, your campaigns)', 'Our clients (campaigns and content you run for others)',
+    'To resell or build into our offer (as a partner, reseller or integration)'] },
+  { id: 'markets', entry: '1319317527', title: 'Which markets do you work in?', help: 'Choose all that apply.', multi: true, cols: 3, options: [
+    'Greece', 'Portugal', 'United Kingdom', 'Germany', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Poland',
+    'Romania', 'Czech Republic', 'Other in Europe', 'Elsewhere'] },
+  { id: 'help', entry: '502166819', title: 'What would help you most?', help: 'Choose up to three.', multi: true, max: 3, options: [
+    'Finding and vetting the right creators (audience, consistency and past brand partners)',
+    'Seeing what competitors run, and with whom (including where they pay creators)',
+    'Content ideas and scripts for your market (based on what works in your category)',
+    'Checking a video before it goes live (what is said, shown and how it lands)',
+    'Tracking campaigns, Stories included (client-ready reports in minutes)',
+    'Reading how audiences really react (comments read against the video)',
+    'Social data in our own tools (through API or MCP)', 'Offering Renfluence to our own clients (white-label or reseller)'] },
+  { id: 'today', entry: '241266100', title: 'How do you handle this today?', options: [
+    'Spreadsheets and manual checks', 'Another platform', 'Our own tool', "We don't, yet"] },
+  { id: 'platform', entry: '1915961324', title: 'Which platform?', text: true },
+  { id: 'volume', title: '', options: VOLUME },
+  { id: 'when', entry: '1577317913', title: 'When would this be useful to you?', options: [
+    'Now, we have a need today', 'In the next 3 months', 'Later this year or next', 'Just exploring'] },
+];
+// Q7 has one Google Form question per wording, so the wording picks the entry too.
+const VOLUME_QUESTIONS = {
+  clients: { entry: '1262789016', title: 'How many clients do you run social or creator work for?' },
+  gov: { entry: '1692973399', title: 'How many campaigns or topics do you follow in a year?' },
+  other: { entry: '1426996101', title: 'How many creator or social campaigns do you run in a year?' },
+};
+const DETAILS = { name: '810863017', company: '762619381', email: '1364327607', phone: '704510133', consent: '197921277' };
+
+const $ = (s) => document.querySelector(s);
+const has = (list, prefix) => (list || []).some((v) => v.startsWith(prefix));
+let answers = {}, step = 0, screen = 'welcome', timer;
+
+// Petros's Q7 rule, checked in order: clients or resale, then government, then everyone else.
+function volumeKey(a) {
+  if (has(a.use, 'Our clients') || has(a.use, 'To resell')) return 'clients';
+  if (has(a.type, 'Government')) return 'gov';
+  return 'other';
+}
+
+// The thank-you line follows George's routing (26 Oct): Partnership, then Enterprise, then Edge.
+function thanksLine(a) {
+  if (has(a.type, 'Creator') && a.type.every((t) => t.startsWith('Creator') || t === 'Something else')) return 'Thanks for stopping by. We\'ll be in touch.';
+  if (has(a.use, 'To resell') || has(a.help, 'Offering Renfluence') || has(a.help, 'Social data')) return 'We\'ll walk you through how partners offer Renfluence to their own clients.';
+  if (has(a.use, 'Our clients')) return 'We\'ll show you Renfluence Enterprise now, live on one of your clients.';
+  if (has(a.help, 'Tracking campaigns') || has(a.type, 'Government')) return 'We\'ll show you Renfluence Enterprise now, live on your own brand.';
+  return 'We\'ll show you Renfluence Edge now: paste any profile or video and see what\'s really in it.';
+}
+
+const flow = () => QUESTIONS.filter((q) => q.id !== 'platform' || answers.today === 'Another platform');
+
+function show(name) {
+  screen = name;
+  for (const id of ['welcome', 'question', 'details', 'thanks']) $('#' + id).hidden = id !== name;
+  arm();
+}
+
+function arm() {
+  clearTimeout(timer);
+  if (screen !== 'welcome') timer = setTimeout(reset, screen === 'thanks' ? THANKS_MS : IDLE_MS);
+}
+
+function reset() {
+  answers = {}; step = 0;
+  $('#details').reset();
+  document.querySelectorAll('.bad').forEach((el) => el.classList.remove('bad'));
+  document.querySelectorAll('.err').forEach((el) => (el.textContent = ''));
+  document.activeElement?.blur();
+  show('welcome');
+}
+
+function optionHtml(value, i) {
+  const m = value.match(/^(.*?) \((.*)\)$/);
+  const label = m ? `<span class="main">${m[1]}</span><span class="sub">${m[2]}</span>` : `<span class="main">${value}</span>`;
+  return `<button class="opt" type="button" data-i="${i}" aria-pressed="false">${label}</button>`;
+}
+
+function renderQuestion() {
+  const q = flow()[step];
+  const vq = q.id === 'volume' ? VOLUME_QUESTIONS[volumeKey(answers)] : null;
+  $('#q-title').textContent = vq ? vq.title : q.title;
+  $('#q-help').textContent = q.help || (q.text ? 'Optional.' : '');
+  const n = QUESTIONS.slice(0, QUESTIONS.indexOf(q) + 1).filter((x) => x.id !== 'platform').length;
+  $('#count').textContent = `${n} of 8`;
+  const body = $('#q-body');
+  if (q.text) {
+    body.innerHTML = '<div class="field"><input id="q-text" type="text" autocomplete="off" aria-label="Which platform?"></div>';
+    const input = $('#q-text');
+    input.value = answers[q.id] || '';
+    input.oninput = () => (answers[q.id] = input.value.trim());
+  } else {
+    body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}">${q.options.map(optionHtml).join('')}</div>`;
+    body.querySelectorAll('.opt').forEach((b) => (b.onclick = () => pick(q, q.options[b.dataset.i])));
+  }
+  paint(q);
+  $('.stage').scrollTop = 0;
+}
+
+function paint(q) {
+  if (!q.text) {
+    const chosen = [].concat(answers[q.id] || []);
+    const full = q.max && chosen.length >= q.max;
+    $('#q-body').querySelectorAll('.opt').forEach((b) => {
+      const on = chosen.includes(q.options[b.dataset.i]);
+      b.setAttribute('aria-pressed', on);
+      b.disabled = full && !on;
+    });
+  }
+  $('#next').disabled = !(q.text || (answers[q.id] && answers[q.id].length));
+}
+
+function pick(q, value) {
+  if (q.multi) {
+    const set = answers[q.id] || [];
+    answers[q.id] = set.includes(value) ? set.filter((v) => v !== value) : !q.max || set.length < q.max ? [...set, value] : set;
+    // Keep the form's option order, which the Sheet's columns read.
+    answers[q.id] = q.options.filter((o) => answers[q.id].includes(o));
+    paint(q);
+  } else {
+    answers[q.id] = value;
+    paint(q);
+    setTimeout(() => { if (screen === 'question' && flow()[step] === q) next(); }, 220);
+  }
+}
+
+function next() {
+  if ($('#next').disabled) return;
+  if (step < flow().length - 1) { step++; renderQuestion(); } else show('details');
+}
+
+function back() {
+  if (step === 0) return reset();
+  step--; renderQuestion();
+}
+
+$('#start').onclick = () => { step = 0; renderQuestion(); show('question'); };
+$('#next').onclick = next;
+$('#back').onclick = back;
+$('#details-back').onclick = () => { step = flow().length - 1; renderQuestion(); show('question'); };
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function check(id, ok, msg) {
+  const field = $(id).closest('.field');
+  field.classList.toggle('bad', !ok);
+  field.querySelector('.err').textContent = ok ? '' : msg;
+  return ok;
+}
+
+$('#details').onsubmit = (e) => {
+  e.preventDefault();
+  if (screen !== 'details') return;
+  const f = e.target.elements;
+  const d = { name: f.name.value.trim(), company: f.company.value.trim(), email: f.email.value.trim(), phone: f.phone.value.trim() };
+  const ok = [
+    check('#f-name', d.name, 'Please enter your name.'),
+    check('#f-company', d.company, 'Please enter your company.'),
+    check('#f-email', EMAIL.test(d.email), 'Please enter a valid email.'),
+  ].every(Boolean);
+  $('#consent-box').classList.toggle('bad', !f.consent.checked);
+  if (!ok || !f.consent.checked) return;
+
+  enqueue(payload(answers, d));
+  $('#thanks-title').textContent = `Thank you, ${d.name.split(/\s+/)[0]}.`;
+  $('#thanks-line').textContent = thanksLine(answers);
+  show('thanks');
+  flush();
+};
+
+function payload(a, d) {
+  const p = new URLSearchParams();
+  for (const q of QUESTIONS) {
+    if (q.id === 'volume' || !a[q.id] || (q.id === 'platform' && a.today !== 'Another platform')) continue;
+    [].concat(a[q.id]).forEach((v) => p.append('entry.' + q.entry, v));
+  }
+  if (a.volume) p.append('entry.' + VOLUME_QUESTIONS[volumeKey(a)].entry, a.volume);
+  for (const k of ['name', 'company', 'email', 'phone']) if (d[k]) p.append('entry.' + DETAILS[k], d[k]);
+  p.append('entry.' + DETAILS.consent, CONSENT);
+  // Sections: 0 intro, 1-6 Q1-Q6, 7 "Which platform?", 8 Q7, 9 Q8, 10 details.
+  p.append('pageHistory', a.today === 'Another platform' ? '0,1,2,3,4,5,6,7,8,9,10' : '0,1,2,3,4,5,6,8,9,10');
+  p.append('fvv', '1');
+  return p.toString();
+}
+
+// Offline queue: every response is saved before it is sent, and leaves the queue only once the POST went through.
+function queue() {
+  try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; } catch { return []; }
+}
+function saveQueue(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); dot(); }
+function enqueue(body) { saveQueue([...queue(), { id: Date.now() + '-' + Math.random().toString(36).slice(2), body }]); }
+
+let sending = false;
+async function flush() {
+  if (sending) return;
+  sending = true;
+  try {
+    let item;
+    while ((item = queue()[0])) {
+      try {
+        // no-cors gives an opaque response: a resolved fetch means Google received it.
+        await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(item.body), signal: AbortSignal.timeout(SEND_TIMEOUT_MS) });
+      } catch { break; }
+      saveQueue(queue().filter((x) => x.id !== item.id));
+    }
+  } finally { sending = false; dot(); }
+}
+
+function dot() {
+  const n = queue().length, el = $('#dot');
+  el.className = n ? 'queued' : navigator.onLine ? '' : 'offline';
+  el.textContent = n || '';
+}
+
+addEventListener('online', flush);
+addEventListener('offline', dot);
+setInterval(flush, RETRY_MS);
+for (const ev of ['pointerdown', 'keydown', 'input']) addEventListener(ev, () => { if (screen !== 'thanks') arm(); }, { capture: true, passive: true });
+addEventListener('contextmenu', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+dot();
+flush();
+</script>
+</body>
+</html>
