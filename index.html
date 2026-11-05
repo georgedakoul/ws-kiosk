@@ -96,6 +96,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .opt[aria-pressed="true"]::after { opacity: 1; }
 .opt:disabled { opacity: .4; }
 .opt:active:not(:disabled) { transform: scale(.99); }
+.reveal { display: grid; grid-template-rows: 0fr; margin-top: 0; opacity: 0; visibility: hidden; transition: grid-template-rows .28s ease, margin-top .28s ease, opacity .2s, visibility .28s; }
+.reveal.open { grid-template-rows: 1fr; margin-top: 18px; opacity: 1; visibility: visible; transition-property: grid-template-rows, margin-top, opacity; }
+.reveal > div { min-height: 0; overflow: hidden; padding: 2px; margin: -2px; }
+@media (prefers-reduced-motion: reduce) { .reveal { transition: none; } }
 .nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 48px 28px; gap: 16px; }
 .nav .btn-primary { min-width: 200px; }
 
@@ -238,8 +242,9 @@ const QUESTIONS = [
     'Reading how audiences really react (comments read against the video)',
     'Social data in our own tools (through API or MCP)', 'Offering Renfluence to our own clients (white-label or reseller)'] },
   { id: 'today', entry: '241266100', title: 'How do you handle this today?', options: [
-    'Spreadsheets and manual checks', 'Another platform', 'Our own tool', "We don't, yet"] },
-  { id: 'platform', entry: '1915961324', title: 'Which platform?', text: true },
+    'Spreadsheets and manual checks', 'Another platform', 'Our own tool', "We don't, yet"],
+    // An answer that needs one more input opens it on the same screen (Google Form section 7).
+    ask: { on: 'Another platform', id: 'platform', entry: '1915961324', label: 'Which platform?' } },
   { id: 'volume', title: '', options: VOLUME },
   { id: 'when', entry: '1577317913', title: 'When would this be useful to you?', options: [
     'Now, we have a need today', 'In the next 3 months', 'Later this year or next', 'Just exploring'] },
@@ -272,8 +277,6 @@ function thanksLine(a) {
   return 'We\'ll show you Renfluence Edge now: paste any profile or video and see what\'s really in it.';
 }
 
-const flow = () => QUESTIONS.filter((q) => q.id !== 'platform' || answers.today === 'Another platform');
-
 function show(name) {
   screen = name;
   for (const id of ['welcome', 'question', 'details', 'thanks']) $('#' + id).hidden = id !== name;
@@ -301,37 +304,39 @@ function optionHtml(value, i) {
 }
 
 function renderQuestion() {
-  const q = flow()[step];
+  const q = QUESTIONS[step];
   const vq = q.id === 'volume' ? VOLUME_QUESTIONS[volumeKey(answers)] : null;
   $('#q-title').textContent = vq ? vq.title : q.title;
-  $('#q-help').textContent = q.help || (q.text ? 'Optional.' : '');
-  const n = QUESTIONS.slice(0, QUESTIONS.indexOf(q) + 1).filter((x) => x.id !== 'platform').length;
-  $('#count').textContent = `${n} of 8`;
+  $('#q-help').textContent = q.help || '';
+  $('#count').textContent = `${step + 1} of ${QUESTIONS.length}`;
   const body = $('#q-body');
-  if (q.text) {
-    body.innerHTML = '<div class="field"><input id="q-text" type="text" autocomplete="off" aria-label="Which platform?"></div>';
+  const ask = q.ask && `<div class="reveal" id="q-ask" inert><div><div class="field"><label for="q-text">${q.ask.label} <span>(optional)</span></label><input id="q-text" type="text" autocomplete="off"></div></div></div>`;
+  body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}">${q.options.map(optionHtml).join('')}</div>${ask || ''}`;
+  body.querySelectorAll('.opt').forEach((b) => (b.onclick = () => pick(q, q.options[b.dataset.i])));
+  if (q.ask) {
     const input = $('#q-text');
-    input.value = answers[q.id] || '';
-    input.oninput = () => (answers[q.id] = input.value.trim());
-  } else {
-    body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}">${q.options.map(optionHtml).join('')}</div>`;
-    body.querySelectorAll('.opt').forEach((b) => (b.onclick = () => pick(q, q.options[b.dataset.i])));
+    input.value = answers[q.ask.id] || '';
+    input.oninput = () => (answers[q.ask.id] = input.value.trim());
   }
   paint(q);
   $('.stage').scrollTop = 0;
 }
 
 function paint(q) {
-  if (!q.text) {
-    const chosen = [].concat(answers[q.id] || []);
-    const full = q.max && chosen.length >= q.max;
-    $('#q-body').querySelectorAll('.opt').forEach((b) => {
-      const on = chosen.includes(q.options[b.dataset.i]);
-      b.setAttribute('aria-pressed', on);
-      b.disabled = full && !on;
-    });
+  const chosen = [].concat(answers[q.id] || []);
+  const full = q.max && chosen.length >= q.max;
+  $('#q-body').querySelectorAll('.opt').forEach((b) => {
+    const on = chosen.includes(q.options[b.dataset.i]);
+    b.setAttribute('aria-pressed', on);
+    b.disabled = full && !on;
+  });
+  if (q.ask) {
+    const open = answers[q.id] === q.ask.on;
+    if (!open) { delete answers[q.ask.id]; $('#q-text').value = ''; }
+    $('#q-ask').classList.toggle('open', open);
+    $('#q-ask').inert = !open;
   }
-  $('#next').disabled = !(q.text || (answers[q.id] && answers[q.id].length));
+  $('#next').disabled = !chosen.length;
 }
 
 function pick(q, value) {
@@ -341,16 +346,24 @@ function pick(q, value) {
     // Keep the form's option order, which the Sheet's columns read.
     answers[q.id] = q.options.filter((o) => answers[q.id].includes(o));
     paint(q);
+  } else if (q.ask && value === q.ask.on) {
+    // Stay on this screen: tap again to deselect, otherwise open the follow-up field.
+    answers[q.id] = answers[q.id] === value ? undefined : value;
+    paint(q);
+    if (answers[q.id]) {
+      $('#q-text').focus({ preventScroll: true });
+      setTimeout(() => $('#q-text').scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300);
+    }
   } else {
     answers[q.id] = value;
     paint(q);
-    setTimeout(() => { if (screen === 'question' && flow()[step] === q) next(); }, 220);
+    setTimeout(() => { if (screen === 'question' && QUESTIONS[step] === q) next(); }, 220);
   }
 }
 
 function next() {
   if ($('#next').disabled) return;
-  if (step < flow().length - 1) { step++; renderQuestion(); } else show('details');
+  if (step < QUESTIONS.length - 1) { step++; renderQuestion(); } else show('details');
 }
 
 function back() {
@@ -361,7 +374,7 @@ function back() {
 $('#start').onclick = () => { step = 0; renderQuestion(); show('question'); };
 $('#next').onclick = next;
 $('#back').onclick = back;
-$('#details-back').onclick = () => { step = flow().length - 1; renderQuestion(); show('question'); };
+$('#details-back').onclick = () => { step = QUESTIONS.length - 1; renderQuestion(); show('question'); };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function check(id, ok, msg) {
@@ -394,13 +407,14 @@ $('#details').onsubmit = (e) => {
 function payload(a, d) {
   const p = new URLSearchParams();
   for (const q of QUESTIONS) {
-    if (q.id === 'volume' || !a[q.id] || (q.id === 'platform' && a.today !== 'Another platform')) continue;
+    if (q.id === 'volume' || !a[q.id]) continue;
     [].concat(a[q.id]).forEach((v) => p.append('entry.' + q.entry, v));
+    if (q.ask && a[q.id] === q.ask.on && a[q.ask.id]) p.append('entry.' + q.ask.entry, a[q.ask.id]);
   }
   if (a.volume) p.append('entry.' + VOLUME_QUESTIONS[volumeKey(a)].entry, a.volume);
   for (const k of ['name', 'company', 'email', 'phone']) if (d[k]) p.append('entry.' + DETAILS[k], d[k]);
   p.append('entry.' + DETAILS.consent, CONSENT);
-  // Sections: 0 intro, 1-6 Q1-Q6, 7 "Which platform?", 8 Q7, 9 Q8, 10 details.
+  // Sections: 0 intro, 1-6 Q1-Q6, 7 "Which platform?" (inline on Q6 here, still posted), 8 Q7, 9 Q8, 10 details.
   p.append('pageHistory', a.today === 'Another platform' ? '0,1,2,3,4,5,6,7,8,9,10' : '0,1,2,3,4,5,6,8,9,10');
   p.append('fvv', '1');
   return p.toString();

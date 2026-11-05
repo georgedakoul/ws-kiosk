@@ -94,10 +94,24 @@ try {
     await click('#next'); await tap('Portugal'); await tap('Greece'); await shot(`${p}-05-q4-markets`);
     await click('#next'); await tap('Finding'); await tap('Seeing'); await tap('Tracking'); await shot(`${p}-06-q5-help-max3`);
     await click('#next'); await shot(`${p}-07-q6-today`);
+    await tap('Another platform'); await sleep(500);
+    // The follow-up opens on the same screen, takes focus, and the counter does not move.
+    assert.deepEqual(await js(`({ open: document.querySelector('#q-ask').classList.contains('open'), focus: document.activeElement.id,
+      title: document.querySelector('#q-title').textContent, count: document.querySelector('#count').textContent,
+      screen, h: document.querySelector('#q-ask').getBoundingClientRect().height > 40 })`),
+      { open: true, focus: 'q-text', title: 'How do you handle this today?', count: '6 of 8', screen: 'question', h: true });
+    // Deselecting hides it and clears it.
+    await js(`document.querySelector('#q-text').value = 'x'; document.querySelector('#q-text').dispatchEvent(new Event('input'))`);
     await tap('Another platform'); await sleep(400);
+    assert.deepEqual(await js(`({ open: document.querySelector('#q-ask').classList.contains('open'), inert: document.querySelector('#q-ask').inert,
+      val: document.querySelector('#q-text').value, ans: answers.platform ?? null, today: answers.today ?? null, next: document.querySelector('#next').disabled })`),
+      { open: false, inert: true, val: '', ans: null, today: null, next: true });
+    await tap('Another platform'); await sleep(500);
     await fill('#q-text', 'Modash'); await js(`document.querySelector('#q-text').dispatchEvent(new Event('input'))`);
-    await shot(`${p}-08-q6b-which-platform`);
-    await click('#next'); await shot(`${p}-09-q7-volume-gov`);
+    await shot(`${p}-08-q6-another-platform-open`);
+    await click('#next');
+    assert.equal(await js(`document.querySelector('#count').textContent`), '7 of 8');
+    await shot(`${p}-09-q7-volume-gov`);
     await tap('4 to 10'); await sleep(400); await shot(`${p}-10-q8-when`);
     await tap('In the next'); await sleep(400); await shot(`${p}-11-details`);
     await fill('#f-name', 'Inês'); await fill('#f-email', 'ines@'); await click('#details button[type=submit]');
@@ -164,7 +178,7 @@ try {
   await tap('Our own brand'); await click('#next');
   await tap('Portugal'); await click('#next');
   await tap('Finding'); await click('#next');
-  await tap('Another platform'); await sleep(400);
+  await tap('Another platform'); await sleep(500);
   await fill('#q-text', 'TEST platform'); await js(`document.querySelector('#q-text').dispatchEvent(new Event('input'))`);
   await click('#next'); await tap('4 to 10'); await sleep(400);
   await tap('In the next'); await sleep(400);
@@ -175,6 +189,11 @@ try {
   const whileOffline = await js(`({ queued: queue().length, dot: document.getElementById('dot').className, count: document.getElementById('dot').textContent, screen })`);
   assert.deepEqual(whileOffline, { queued: 1, dot: 'queued', count: '1', screen: 'thanks' });
   assert.equal(posts, 0);
+  // Same data as before the inline field: the platform entry and section 7 in pageHistory.
+  const body = new URLSearchParams(await js(`queue()[0].body`));
+  assert.equal(body.get('entry.1915961324'), 'TEST platform');
+  assert.equal(body.get('entry.241266100'), 'Another platform');
+  assert.equal(body.get('pageHistory'), '0,1,2,3,4,5,6,7,8,9,10');
   if (OUT) await shot('offline-queued-dot');
   offline = false;
   await page('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
