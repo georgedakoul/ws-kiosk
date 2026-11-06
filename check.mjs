@@ -1,6 +1,7 @@
 // End-to-end check in headless Chrome: every screen on common tablet and phone sizes in both orientations
 // (screenshots plus a layout audit), the Q7 and thank-you rules, the idle and thank-you resets, the lead archive
-// and CSV export, private-mode storage, and the offline queue.
+// and CSV export, private-mode storage, the offline queue, the wording Sheet (stubbed CSV: edited label, unchanged post, cache,
+// blank cell, error page) and Q4's "Other in Europe" countries.
 // Usage: node check.mjs [page-url] [screenshot-dir]
 // By default formResponse is intercepted and answered locally. LIVE=1 lets the offline-queue submission
 // (name "TEST Koulouris kiosk offline", tablet "TEST") through to the real Google Form: one row in the Sheet,
@@ -103,9 +104,9 @@ async function snap(tag, name) {
 }
 
 // One whole visit through the kiosk, ending on the thank-you screen.
-async function lead({ name = 'Check Person', company = 'Check Co', email = 'check.person@example.com', phone = '', platform = false } = {}) {
+async function lead({ name = 'Check Person', company = 'Check Co', email = 'check.person@example.com', phone = '', platform = false, agency = 'Agency' } = {}) {
   await click('#start');
-  await tap('Agency'); await click('#next');
+  await tap(agency); await click('#next');
   await tap('Director'); await sleep(400);
   await tap('Our own brand'); await click('#next');
   await tap('Portugal'); await click('#next');
@@ -139,7 +140,8 @@ function parseCsv(text) {
 const SIZES = [[1180, 820], [1133, 744], [1280, 800], [1024, 768], [1366, 1024], [390, 844], [360, 640], [1280, 600]];
 const ATHENS_ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+0[23]:00$/;
 
-let posts = 0, offline = false;
+// The wording Sheet's CSV: null fails the request (offline), a string is served as the response. The real Sheet is never read.
+let posts = 0, offline = false, texts = null;
 
 
 
@@ -152,13 +154,20 @@ try {
   await page('Network.enable');
   await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dl });
   listeners.push((m) => {
-    if (m.method === 'Fetch.requestPaused') offline
-      ? page('Fetch.failRequest', { requestId: m.params.requestId, errorReason: 'InternetDisconnected' })
-      : page('Fetch.fulfillRequest', { requestId: m.params.requestId, responseCode: 200, body: '' });
+    if (m.method === 'Fetch.requestPaused') {
+      const { requestId, request } = m.params;
+      if (request.url.includes('/gviz/')) texts === null
+        ? page('Fetch.failRequest', { requestId, errorReason: 'InternetDisconnected' })
+        : page('Fetch.fulfillRequest', { requestId, responseCode: 200, body: Buffer.from(texts).toString('base64'),
+          responseHeaders: [{ name: 'content-type', value: 'text/csv' }, { name: 'access-control-allow-origin', value: '*' }] });
+      else offline
+        ? page('Fetch.failRequest', { requestId, errorReason: 'InternetDisconnected' })
+        : page('Fetch.fulfillRequest', { requestId, responseCode: 200, body: '' });
+    }
     if (m.method === 'Network.responseReceived' && m.params.response.url.includes('formResponse')) posts++;
   });
   // The run never reaches the real form, except the one LIVE lead at the end.
-  await page('Fetch.enable', { patterns: [{ urlPattern: '*formResponse*' }] });
+  await page('Fetch.enable', { patterns: [{ urlPattern: '*formResponse*' }, { urlPattern: '*gviz*' }] });
   mkdirSync(OUT, { recursive: true });
   // Counts the navigator.storage.persist() calls the page makes on load.
   await page('Page.addScriptToEvaluateOnNewDocument', { source: `window.__persist = 0;
@@ -185,6 +194,12 @@ try {
     await tap('Director'); await sleep(400);
     await tap('Our own brand'); await snap(tag, `${tag}-04-q3-for-whom`);
     await click('#next'); await tap('Portugal'); await tap('Greece'); await snap(tag, `${tag}-05-q4-markets`);
+    // "Other in Europe" opens the extra countries and the text field on the same screen. Closing it clears them.
+    await tap('Other in Europe'); await sleep(500); await tap('Spain'); await tap('Italy'); await snap(tag, `${tag}-05b-q4-other-in-europe`);
+    assert.deepEqual(await js(`({ open: document.querySelector('#q-more').classList.contains('open'), more: answers.more, count: document.querySelector('#count').textContent })`),
+      { open: true, more: ['Italy', 'Spain'], count: '4 of 8' }, tag + ': extra countries open inline, in list order');
+    await tap('Other in Europe'); await sleep(400);
+    assert.deepEqual(await js(`({ open: document.querySelector('#q-more').classList.contains('open'), more: answers.more ?? null })`), { open: false, more: null }, tag + ': closing clears them');
     await click('#next'); await tap('Finding'); await tap('Seeing'); await tap('Tracking'); await snap(tag, `${tag}-06-q5-help-max3`);
     await click('#next'); await snap(tag, `${tag}-07-q6-today`);
     await tap('Another platform'); await sleep(500);
@@ -262,6 +277,83 @@ try {
   assert.match(rules.tOwn, /your own brand/);
   assert.match(rules.tEdge, /Edge/);
   console.log('rules: ok', rules);
+
+  // Q4 "Other in Europe": the extra countries and text post to the extra Form question «Other markets», and Q4's own checkbox keeps
+  // only its original options, so the Sheet's scoring reads the same as before.
+  await go(PAGE);
+  await click('#start');
+  await tap('Agency'); await click('#next'); await tap('Director'); await sleep(400); await tap('Our own brand'); await click('#next');
+  await tap('Portugal'); await tap('Other in Europe'); await sleep(500);
+  await tap('Spain');
+  await fill('#q-more-text', 'Moldova'); await input('#q-more-text');
+  await click('#next'); await tap('Finding'); await click('#next'); await tap('Our own tool'); await sleep(400);
+  await tap('4 to 10'); await sleep(400); await tap('In the next'); await sleep(400);
+  await fill('#f-name', 'Other Europe'); await fill('#f-company', 'Check Co'); await fill('#f-email', 'other.europe@example.com');
+  await js(`document.querySelector('#f-consent').checked = true`);
+  await click('#details button[type=submit]');
+  const eu = (await archive()).at(-1), euBody = new URLSearchParams(eu.body);
+  assert.deepEqual(euBody.getAll('entry.1319317527'), ['Portugal', 'Other in Europe'], 'Q4 posts only its own options');
+  assert.deepEqual(euBody.getAll('entry.496172218'), ['Spain, Moldova'], 'extra countries and text post to «Other markets»');
+  assert.equal(eu.answers['Other markets'], 'Spain, Moldova');
+  assert.equal(new URLSearchParams((await archive())[0].body).get('entry.496172218'), null, 'no «Other markets» without Other in Europe');
+  console.log('q4 other in europe: ok');
+
+  // The wording Sheet. Two leads with the same taps, built-in text then edited text: the posted bodies are identical.
+  const CSV = (rows) => rows.map((r) => r.map((v) => '"' + v.replace(/"/g, '""') + '"').join(',')).join('\r\n') + '\r\n';
+  const cached = () => js(`JSON.parse(localStorage.getItem('ws-kiosk-texts') || '{}')`);
+  const text = (sel) => js(`document.querySelector(${JSON.stringify(sel)}).textContent`);
+  await js(`localStorage.removeItem('ws-kiosk-texts')`);
+  texts = null;
+  await go(PAGE);
+  assert.equal(await text('.welcome-body h1'), 'Creator intelligence', 'built-in text when the fetch fails');
+  await lead({ name: 'Same Taps' });
+  const bodyBuiltIn = (await archive()).at(-1).body;
+  texts = CSV([['Αλλάζετε μόνο τη στήλη text.', '', ''], ['', '', ''], ['key', 'text', 'note'],
+    ['intro.title', 'Edited headline', 'x'], ['start', '', 'blank cell'], ['type.agency', 'Studio', ''], ['type.agency.sub', 'film and design', ''],
+    ['thanks.edge', 'Custom edge line.', ''], ['count', '{n} / {total}', ''], ['bogus.key', 'ignored', ''],
+    ['brand', 'Web Summit\nLisbon', 'two lines']]);
+  await go(PAGE);
+  await sleep(500);
+  assert.equal(await text('.welcome-body h1'), 'Edited headline', 'a changed label shows on screen');
+  assert.equal(await text('#start'), 'Start', 'a blank cell falls back to the built-in text');
+  assert.deepEqual(await cached(), { 'intro.title': 'Edited headline', 'type.agency': 'Studio', 'type.agency.sub': 'film and design',
+    'thanks.edge': 'Custom edge line.', count: '{n} / {total}', brand: 'Web Summit\nLisbon' }, 'cache holds the good rows only');
+  assert.equal(await js(`getComputedStyle(document.querySelector('.brand p')).whiteSpace`), 'pre-line');
+  await click('#start');
+  assert.deepEqual(await js(`[...document.querySelectorAll('.opt')].slice(0, 2).map(b => b.textContent)`), ['Studiofilm and design', 'Brand' + 'in-house marketing, content or social']);
+  assert.equal(await text('#count'), '1 / 8');
+  await js(`reset()`);
+  await lead({ name: 'Same Taps', agency: 'Studio' });
+  assert.equal((await archive()).at(-1).body, bodyBuiltIn, 'editing a label never changes what is posted');
+  assert.equal(await text('#thanks-line'), 'Custom edge line.');
+  console.log('texts: edited label shown, blank falls back, posted body unchanged');
+
+  // New text waits for the welcome screen: a visitor mid-question never sees the wording change.
+  await go(PAGE);
+  await click('#start'); await tap('Studio');
+  texts = CSV([['key', 'text', 'note'], ['intro.title', 'Second headline', ''], ['type.title', 'Changed question', '']]);
+  await js('loadTexts()'); await sleep(500);
+  assert.equal(await text('#q-title'), 'Which best describes you?', 'the visible question keeps its wording');
+  await js(`reset()`);
+  assert.equal(await text('.welcome-body h1'), 'Second headline', 'the next welcome screen has the new wording');
+  await click('#start');
+  assert.equal(await text('#q-title'), 'Changed question');
+
+  // Offline load: the last good copy comes from the cache. An error page instead of a CSV changes nothing.
+  texts = null;
+  await go(PAGE);
+  assert.equal(await text('.welcome-body h1'), 'Second headline', 'offline load uses the cached text');
+  texts = '<html><body>Sign in</body></html>';
+  await go(PAGE); await sleep(500);
+  assert.equal(await text('.welcome-body h1'), 'Second headline', 'an error page keeps the cached text');
+  assert.equal((await cached())['intro.title'], 'Second headline');
+  texts = CSV([['key', 'text', 'note'], ['intro.title', '', '']]);
+  await go(PAGE); await sleep(500);
+  assert.equal(await text('.welcome-body h1'), 'Creator intelligence', 'a cell blanked in the Sheet goes back to the built-in text');
+  texts = null;
+  await js(`localStorage.removeItem('ws-kiosk-texts')`);
+  await go(PAGE);
+  console.log('texts: new text only on welcome, offline uses cache, error page and blank cell fall back');
 
   // Idle reset: answers and inputs are cleared after the (shortened) idle timer.
   await go(PAGE + '?idle=2&thanks=2');
@@ -351,7 +443,7 @@ try {
   assert.deepEqual(rows[0], ['Timestamp', 'Which best describes you?', 'What is your role?', 'Who would you use it for?', 'Which markets do you work in?',
     'What would help you most?', 'How do you handle this today?', 'Which platform?', 'How many clients do you run social or creator work for?',
     'How many campaigns or topics do you follow in a year?', 'How many creator or social campaigns do you run in a year?',
-    'When would this be useful to you?', 'Full name', 'Company', 'Work email', 'Phone', 'Consent', 'Tablet', 'Sent']);
+    'When would this be useful to you?', 'Full name', 'Company', 'Work email', 'Phone', 'Consent', 'Tablet', 'Other markets', 'Sent']);
   const col = (n) => rows[0].indexOf(n), last = rows.at(-1);
   assert.match(rows[1][0], ATHENS_ISO);
   assert.equal(rows[1][col('Full name')], 'Inês Carvalho');

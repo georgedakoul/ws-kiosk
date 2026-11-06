@@ -11,6 +11,22 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   "Lisbon kiosk: qualification questionnaire".
 - No analytics, no third-party scripts, no fonts from a CDN.
 
+## Wording lives in a Sheet
+
+- Panagiotis and Petros edit the wording in the Sheet «Kiosk κείμενα» (tab `Texts`, columns `key | text | note`,
+  https://docs.google.com/spreadsheets/d/1GIlCsNbtw3rxXuhz70V5ooyr3SAF2ut_uz3GOhQArBg/edit). It holds only texts,
+  shared "anyone with the link: viewer", editors inherited from the team folder. The leads Sheet stays private.
+- The page fetches the tab as CSV (`/gviz/tq?tqx=out:csv&sheet=Texts`) at load and every 5 minutes. Built-in text is the
+  fallback: fetch fails, blank cell, unknown key, or a non-CSV reply. The last good copy is cached in `ws-kiosk-texts`.
+  New text is applied only on the welcome screen (`adopt()` inside `show('welcome')`), never mid-visitor.
+- Every visible string is a key: static HTML carries `data-t="key"`, the rest comes from `QUESTIONS`, `VOLUME_QUESTIONS`
+  and `DEF`. A new key needs a row in the Sheet (the built-in text is its default).
+- Editing wording never changes what is posted: options post their original `v` (Form value), looked up by option key `k`,
+  and the consent post is always the original `CONSENT`. Adding or removing a question or option is a code change.
+- Q4 «Other in Europe» opens more countries and a «Which market?» field on the same screen. They post as one answer to the
+  extra Form question «Other markets» (`entry.496172218`, optional, same section as Q4), never to Q4's own checkbox, so the
+  Sheet's scoring still reads Q4 as before. In the leads Sheet the column sits after «Tablet» and before «Score».
+
 ## Never lose a lead
 
 - Every submitted lead is appended to `localStorage` `ws-kiosk-archive` (timestamp with the Athens offset,
@@ -33,8 +49,9 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
 `node check.mjs [url] [screenshot-dir]` runs headless Chrome: every screen at 8 sizes in both orientations
 (1180x820, 1133x744, 1280x800, 1024x768, 1366x1024, 390x844, 360x640, 1280x600) with a layout audit and
 screenshots in `~/.local/state/pi-subagents/ws-kiosk-check/`, the Q7 and thank-you rules, the idle and
-thank-you resets, the archive and CSV export, private-mode storage, and the offline queue with `formResponse`
-intercepted. `ONLY=1280x800` limits the sizes. `LIVE=1` sends the offline-queue lead (name «TEST Koulouris
+thank-you resets, the archive and CSV export, private-mode storage, the wording Sheet with a stubbed CSV (edited label shown,
+posted body unchanged, cache offline, blank cell falls back, error page ignored), Q4's extra countries, and the offline queue
+with `formResponse` intercepted. `ONLY=1280x800` limits the sizes. `LIVE=1` sends the offline-queue lead (name «TEST Koulouris
 kiosk offline», tablet «TEST») to the real form, so delete that Sheet row after.
 Healthy output ends with:
 

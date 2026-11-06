@@ -54,7 +54,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   display: flex; flex-direction: column; justify-content: space-between;
 }
 .brand img { width: 12rem; height: auto; }
-.brand p { font-size: 1.8rem; font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
+.brand p { font-size: 1.8rem; font-weight: 700; line-height: 1.15; letter-spacing: -.01em; white-space: pre-line; }
 .welcome-body { flex: 1; overflow-y: auto; padding: 2.8rem 3.2rem 2rem; display: flex; flex-direction: column; gap: 1.4rem; }
 /* Centered with spacers rather than justify-content, which would cut off the top when the text is taller than the screen. */
 .welcome-body::before, .welcome-body::after { content: ""; flex: 1 0 0; }
@@ -82,6 +82,14 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
 .options.cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .options.cols1 { grid-template-columns: minmax(0, 1fr); }
+/* Q4's extra European countries: the same buttons, tighter, as many across as fit. */
+.options.compact { grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 0.5rem; }
+.compact .opt { display: flex; align-items: center; min-height: 2.7rem; padding: 0.35rem 0.5rem 0.35rem 2.45rem; }
+.compact .opt::before { left: 0.7rem; }
+.compact .opt::after { left: 1.15rem; }
+.compact .opt .main { font-size: 0.88rem; line-height: 1.2; overflow-wrap: anywhere; }
+.more-title { font-size: 0.9rem; font-weight: 650; margin-bottom: 0.5rem; }
+.more-field { margin-top: 0.9rem; }
 .opt {
   min-height: 3.8rem; padding: 0.7rem 1rem 0.7rem 3rem; border-radius: var(--r); background: var(--white);
   border: 2px solid var(--line); text-align: left; position: relative; transition: background .15s, border-color .15s, opacity .15s;
@@ -113,7 +121,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .field { display: flex; flex-direction: column; gap: 0.4rem; }
 .field label { font-size: 0.9rem; font-weight: 650; }
-.field label span { font-weight: 400; color: var(--muted); }
+.field label .hint { font-weight: 400; color: var(--muted); }
 .field input[type=text], .field input[type=email], .field input[type=tel] {
   width: 100%; min-width: 0; height: 3.2rem; border-radius: var(--r); border: 2px solid var(--line); background: var(--white);
   padding: 0 0.9rem; font: inherit; font-size: 1.1rem; color: var(--ink); outline: none;
@@ -157,7 +165,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   .welcome-body { padding: 2.4rem; gap: 1.8rem; }
   .stage { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 1.6rem; padding-top: 0.8rem; }
   .stage > div:first-child { max-height: 40vh; }
-  .options:not(.cols3) { grid-template-columns: minmax(0, 1fr); }
+  .options:not(.cols3):not(.compact) { grid-template-columns: minmax(0, 1fr); }
 }
 /* Phones and narrow windows. */
 @media (max-width: 700px) {
@@ -202,26 +210,27 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   <div id="storage-warn" role="alert" hidden>Private mode: leads are not saved on this device</div>
   <div class="brand">
     <img src="logo-white.png" alt="Renfluence">
-    <div><p>Web Summit<br>Lisbon 2026</p><span id="device"></span></div>
+    <div><p data-t="brand">Web Summit
+Lisbon 2026</p><span id="device"></span></div>
   </div>
   <div class="welcome-body">
     <div>
-      <h1>Creator intelligence</h1>
-      <p class="tagline">Where Content Meets Clarity.</p>
+      <h1 data-t="intro.title">Creator intelligence</h1>
+      <p class="tagline" data-t="intro.tagline">Where Content Meets Clarity.</p>
     </div>
-    <p class="intro">We watch the video itself and benchmark it in your market. Tell us about your work in about a minute, and we'll show you what Renfluence sees for you.</p>
+    <p class="intro" data-t="intro.text">We watch the video itself and benchmark it in your market. Tell us about your work in about a minute, and we'll show you what Renfluence sees for you.</p>
     <div class="features">
-      <h2>What Renfluence can do for you</h2>
+      <h2 data-t="benefits.title">What Renfluence can do for you</h2>
       <ul>
-        <li><b>Know what to make</b>The content types and formats that work in your category and market, before you brief.</li>
-        <li><b>Pick the right creators</b>Vetted on what they actually deliver, who watches them and who they've worked with.</li>
-        <li><b>See what competitors run</b>Which creators they use, where they pay, and where they leave gaps.</li>
-        <li><b>Prove what worked</b>Every campaign post tracked, Stories included, with audience reaction and client-ready reports.</li>
+        <li><b data-t="benefit1.title">Know what to make</b><span data-t="benefit1.text">The content types and formats that work in your category and market, before you brief.</span></li>
+        <li><b data-t="benefit2.title">Pick the right creators</b><span data-t="benefit2.text">Vetted on what they actually deliver, who watches them and who they've worked with.</span></li>
+        <li><b data-t="benefit3.title">See what competitors run</b><span data-t="benefit3.text">Which creators they use, where they pay, and where they leave gaps.</span></li>
+        <li><b data-t="benefit4.title">Prove what worked</b><span data-t="benefit4.text">Every campaign post tracked, Stories included, with audience reaction and client-ready reports.</span></li>
       </ul>
     </div>
     <div class="start">
-      <button class="btn btn-primary" id="start">Start</button>
-      <p class="small">8 quick taps and your details. We use them only to follow up on this conversation.</p>
+      <button class="btn btn-primary" id="start" data-t="start">Start</button>
+      <p class="small" data-t="start.small">8 quick taps and your details. We use them only to follow up on this conversation.</p>
     </div>
   </div>
 </section>
@@ -233,26 +242,26 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
     <div id="q-body"></div>
   </div>
   <div class="nav">
-    <button class="btn btn-ghost" id="back">Back</button>
-    <button class="btn btn-primary" id="next">Next</button>
+    <button class="btn btn-ghost" id="back" data-t="back">Back</button>
+    <button class="btn btn-primary" id="next" data-t="next">Next</button>
   </div>
 </section>
 
 <form id="details" class="screen" hidden novalidate>
-  <div class="bar"><img src="logo-blue.png" alt="Renfluence"><span class="count">Last step</span></div>
+  <div class="bar"><img src="logo-blue.png" alt="Renfluence"><span class="count" data-t="last_step">Last step</span></div>
   <div class="stage">
-    <div><h1>Where should we send what we show you?</h1></div>
+    <div><h1 data-t="details.title">Where should we send what we show you?</h1></div>
     <div class="fields">
-      <div class="field"><label for="f-name">Full name</label><input id="f-name" name="name" type="text" autocomplete="off" autocapitalize="words"><span class="err"></span></div>
-      <div class="field"><label for="f-company">Company</label><input id="f-company" name="company" type="text" autocomplete="off"><span class="err"></span></div>
-      <div class="field"><label for="f-email">Work email</label><input id="f-email" name="email" type="email" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="err"></span></div>
-      <div class="field"><label for="f-phone">Phone <span>(optional)</span></label><input id="f-phone" name="phone" type="tel" autocomplete="off"><span class="err"></span></div>
-      <label class="consent" id="consent-box"><input id="f-consent" name="consent" type="checkbox"><span>I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.</span></label>
+      <div class="field"><label for="f-name" data-t="details.name">Full name</label><input id="f-name" name="name" type="text" autocomplete="off" autocapitalize="words"><span class="err"></span></div>
+      <div class="field"><label for="f-company" data-t="details.company">Company</label><input id="f-company" name="company" type="text" autocomplete="off"><span class="err"></span></div>
+      <div class="field"><label for="f-email" data-t="details.email">Work email</label><input id="f-email" name="email" type="email" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="err"></span></div>
+      <div class="field"><label for="f-phone"><span data-t="details.phone">Phone</span> <span class="hint" data-t="optional">(optional)</span></label><input id="f-phone" name="phone" type="tel" autocomplete="off"><span class="err"></span></div>
+      <label class="consent" id="consent-box"><input id="f-consent" name="consent" type="checkbox"><span data-t="details.consent">I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.</span></label>
     </div>
   </div>
   <div class="nav">
-    <button class="btn btn-ghost" type="button" id="details-back">Back</button>
-    <button class="btn btn-primary" type="submit">Send</button>
+    <button class="btn btn-ghost" type="button" id="details-back" data-t="back">Back</button>
+    <button class="btn btn-primary" type="submit" data-t="send">Send</button>
   </div>
 </form>
 
@@ -260,7 +269,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   <img src="logo-white.png" alt="Renfluence">
   <h1 id="thanks-title"></h1>
   <p id="thanks-line"></p>
-  <button class="btn btn-light" id="next-visitor" type="button">Next visitor</button>
+  <button class="btn btn-light" id="next-visitor" type="button" data-t="next_visitor">Next visitor</button>
 </section>
 
 <section id="export" class="screen" hidden>
@@ -285,36 +294,45 @@ const IDLE_MS = (+params.get('idle') || 90) * 1000;
 const THANKS_MS = (+params.get('thanks') || 25) * 1000;
 const RETRY_MS = 30000, SEND_TIMEOUT_MS = 20000, QUEUE_KEY = 'ws-kiosk-queue', ARCHIVE_KEY = 'ws-kiosk-archive', DEVICE_KEY = 'ws-kiosk-device';
 const CONSENT = "I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.";
-const VOLUME = ['1 to 3', '4 to 10', 'More than 10'];
+// Each option has a key (the Sheet's text rows are named by it) and the value the Google Form knows. Only the value is ever posted.
+const O = (list) => Object.entries(list).map(([k, v]) => ({ k, v }));
 
 const QUESTIONS = [
-  { id: 'type', entry: '1697022334', title: 'Which best describes you?', help: 'Choose one, or two if both apply.', multi: true, max: 2, options: [
-    'Agency (creative, social, media or influencer)', 'Brand (in-house marketing, content or social)',
-    'Government or public body (communications offices and public organisations)',
-    'Tech or reseller partner (you build or resell marketing technology)', 'Creator (you make the content yourself)', 'Something else'] },
-  { id: 'role', entry: '1788746037', title: 'What is your role?', options: [
-    'Founder, owner or CEO', 'Director or Head of', 'Manager or lead', 'Specialist or executive', 'Something else'] },
-  { id: 'use', entry: '1783443947', title: 'Who would you use it for?', help: 'Choose all that apply.', multi: true, cols: 1, options: [
-    'Our own brand or work (your content, your campaigns)', 'Our clients (campaigns and content you run for others)',
-    'To resell or build into our offer (as a partner, reseller or integration)'] },
-  { id: 'markets', entry: '1319317527', title: 'Which markets do you work in?', help: 'Choose all that apply.', multi: true, cols: 3, options: [
-    'Greece', 'Portugal', 'United Kingdom', 'Germany', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Poland',
-    'Romania', 'Czech Republic', 'Other in Europe', 'Elsewhere'] },
-  { id: 'help', entry: '502166819', title: 'What would help you most?', help: 'Choose up to three.', multi: true, max: 3, options: [
-    'Finding and vetting the right creators (audience, consistency and past brand partners)',
-    'Seeing what competitors run, and with whom (including where they pay creators)',
-    'Content ideas and scripts for your market (based on what works in your category)',
-    'Checking a video before it goes live (what is said, shown and how it lands)',
-    'Tracking campaigns, Stories included (client-ready reports in minutes)',
-    'Reading how audiences really react (comments read against the video)',
-    'Social data in our own tools (through API or MCP)', 'Offering Renfluence to our own clients (white-label or reseller)'] },
-  { id: 'today', entry: '241266100', title: 'How do you handle this today?', options: [
-    'Spreadsheets and manual checks', 'Another platform', 'Our own tool', "We don't, yet"],
+  { id: 'type', entry: '1697022334', title: 'Which best describes you?', help: 'Choose one, or two if both apply.', multi: true, max: 2, options: O({
+    agency: 'Agency (creative, social, media or influencer)', brand: 'Brand (in-house marketing, content or social)',
+    gov: 'Government or public body (communications offices and public organisations)',
+    tech: 'Tech or reseller partner (you build or resell marketing technology)', creator: 'Creator (you make the content yourself)', other: 'Something else' }) },
+  { id: 'role', entry: '1788746037', title: 'What is your role?', options: O({
+    founder: 'Founder, owner or CEO', director: 'Director or Head of', manager: 'Manager or lead', specialist: 'Specialist or executive', other: 'Something else' }) },
+  { id: 'use', entry: '1783443947', title: 'Who would you use it for?', help: 'Choose all that apply.', multi: true, cols: 1, options: O({
+    own: 'Our own brand or work (your content, your campaigns)', clients: 'Our clients (campaigns and content you run for others)',
+    resell: 'To resell or build into our offer (as a partner, reseller or integration)' }) },
+  { id: 'markets', entry: '1319317527', title: 'Which markets do you work in?', help: 'Choose all that apply.', multi: true, cols: 3, options: O({
+    greece: 'Greece', portugal: 'Portugal', uk: 'United Kingdom', germany: 'Germany', uae: 'United Arab Emirates', saudi: 'Saudi Arabia', qatar: 'Qatar',
+    poland: 'Poland', romania: 'Romania', czechia: 'Czech Republic', europe: 'Other in Europe', elsewhere: 'Elsewhere' }),
+    // "Other in Europe" opens more countries and a text field on this screen. They post as one answer to the extra Form question
+    // «Other markets», so Q4's own checkbox (which the Sheet scores) still gets only its original options.
+    more: { on: 'Other in Europe', id: 'more', textId: 'moreText', entry: '496172218', column: 'Other markets', label: 'Which market?', list: O({
+      albania: 'Albania', austria: 'Austria', belgium: 'Belgium', bosnia: 'Bosnia and Herzegovina', bulgaria: 'Bulgaria', croatia: 'Croatia',
+      cyprus: 'Cyprus', denmark: 'Denmark', estonia: 'Estonia', finland: 'Finland', france: 'France', hungary: 'Hungary', iceland: 'Iceland',
+      ireland: 'Ireland', italy: 'Italy', kosovo: 'Kosovo', latvia: 'Latvia', liechtenstein: 'Liechtenstein', lithuania: 'Lithuania',
+      luxembourg: 'Luxembourg', malta: 'Malta', montenegro: 'Montenegro', netherlands: 'Netherlands', macedonia: 'North Macedonia',
+      norway: 'Norway', serbia: 'Serbia', slovakia: 'Slovakia', slovenia: 'Slovenia', spain: 'Spain', sweden: 'Sweden', switzerland: 'Switzerland' }) } },
+  { id: 'help', entry: '502166819', title: 'What would help you most?', help: 'Choose up to three.', multi: true, max: 3, options: O({
+    creators: 'Finding and vetting the right creators (audience, consistency and past brand partners)',
+    competitors: 'Seeing what competitors run, and with whom (including where they pay creators)',
+    ideas: 'Content ideas and scripts for your market (based on what works in your category)',
+    check: 'Checking a video before it goes live (what is said, shown and how it lands)',
+    tracking: 'Tracking campaigns, Stories included (client-ready reports in minutes)',
+    audiences: 'Reading how audiences really react (comments read against the video)',
+    api: 'Social data in our own tools (through API or MCP)', whitelabel: 'Offering Renfluence to our own clients (white-label or reseller)' }) },
+  { id: 'today', entry: '241266100', title: 'How do you handle this today?', options: O({
+    sheets: 'Spreadsheets and manual checks', platform: 'Another platform', own: 'Our own tool', none: "We don't, yet" }),
     // An answer that needs one more input opens it on the same screen (Google Form section 7).
     ask: { on: 'Another platform', id: 'platform', entry: '1915961324', label: 'Which platform?' } },
-  { id: 'volume', title: '', options: VOLUME },
-  { id: 'when', entry: '1577317913', title: 'When would this be useful to you?', options: [
-    'Now, we have a need today', 'In the next 3 months', 'Later this year or next', 'Just exploring'] },
+  { id: 'volume', title: '', options: O({ few: '1 to 3', some: '4 to 10', many: 'More than 10' }) },
+  { id: 'when', entry: '1577317913', title: 'When would this be useful to you?', options: O({
+    now: 'Now, we have a need today', soon: 'In the next 3 months', later: 'Later this year or next', exploring: 'Just exploring' }) },
 ];
 // Q7 has one Google Form question per wording, so the wording picks the entry too.
 const VOLUME_QUESTIONS = {
@@ -332,9 +350,13 @@ const COLUMNS = [
     : [{ label: q.title, entry: q.entry }, ...(q.ask ? [{ label: q.ask.label, entry: q.ask.entry }] : [])]),
   { label: 'Full name', entry: DETAILS.name }, { label: 'Company', entry: DETAILS.company }, { label: 'Work email', entry: DETAILS.email },
   { label: 'Phone', entry: DETAILS.phone }, { label: 'Consent', entry: DETAILS.consent }, { label: 'Tablet', entry: DEVICE_ENTRY },
+  // The Form added this question after the others, so the Sheet has it last.
+  { label: QUESTIONS.find((q) => q.more).more.column, entry: QUESTIONS.find((q) => q.more).more.entry },
 ];
 
 const $ = (s) => document.querySelector(s);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const split = (v) => { const m = v.match(/^(.*?) \((.*)\)$/); return m ? [m[1], m[2]] : [v]; }; // "Main (sub label)"
 const has = (list, prefix) => (list || []).some((v) => v.startsWith(prefix));
 let answers = {}, step = 0, screen = 'welcome', deadline = 0;
 
@@ -346,16 +368,18 @@ function volumeKey(a) {
 }
 
 // The thank-you line follows George's routing (26 Oct): Partnership, then Enterprise, then Edge.
-function thanksLine(a) {
-  if (has(a.type, 'Creator') && a.type.every((t) => t.startsWith('Creator') || t === 'Something else')) return 'Thanks for stopping by. We\'ll be in touch.';
-  if (has(a.use, 'To resell') || has(a.help, 'Offering Renfluence') || has(a.help, 'Social data')) return 'We\'ll walk you through how partners offer Renfluence to their own clients.';
-  if (has(a.use, 'Our clients')) return 'We\'ll show you Renfluence Enterprise now, live on one of your clients.';
-  if (has(a.help, 'Tracking campaigns') || has(a.type, 'Government')) return 'We\'ll show you Renfluence Enterprise now, live on your own brand.';
-  return 'We\'ll show you Renfluence Edge now: paste any profile or video and see what\'s really in it.';
+function thanksKey(a) {
+  if (has(a.type, 'Creator') && a.type.every((t) => t.startsWith('Creator') || t === 'Something else')) return 'creator';
+  if (has(a.use, 'To resell') || has(a.help, 'Offering Renfluence') || has(a.help, 'Social data')) return 'partner';
+  if (has(a.use, 'Our clients')) return 'clients';
+  if (has(a.help, 'Tracking campaigns') || has(a.type, 'Government')) return 'brand';
+  return 'edge';
 }
+const thanksLine = (a) => t('thanks.' + thanksKey(a));
 
 function show(name) {
   screen = name;
+  if (name === 'welcome') adopt();
   for (const id of ['welcome', 'question', 'details', 'thanks', 'export']) $('#' + id).hidden = id !== name;
   $('#device').textContent = device() ? device() : 'Tablet: not set';
   $('#device').className = device() ? '' : 'unset';
@@ -380,22 +404,31 @@ function reset() {
   show('welcome');
 }
 
-function optionHtml(value, i) {
-  const m = value.match(/^(.*?) \((.*)\)$/);
-  const label = m ? `<span class="main">${m[1]}</span><span class="sub">${m[2]}</span>` : `<span class="main">${value}</span>`;
-  return `<button class="opt" type="button" data-i="${i}" aria-pressed="false">${label}</button>`;
+function optionHtml(q, o, i) {
+  const [main, sub] = split(o.v), key = `${q.id}.${o.k}`;
+  return `<button class="opt" type="button" data-i="${i}" aria-pressed="false"><span class="main">${esc(t(key))}</span>${sub ? `<span class="sub">${esc(t(key + '.sub'))}</span>` : ''}</button>`;
 }
 
 function renderQuestion() {
   const q = QUESTIONS[step];
-  const vq = q.id === 'volume' ? VOLUME_QUESTIONS[volumeKey(answers)] : null;
-  $('#q-title').textContent = vq ? vq.title : q.title;
-  $('#q-help').textContent = q.help || '';
-  $('#count').textContent = `${step + 1} of ${QUESTIONS.length}`;
+  $('#q-title').textContent = t(q.id === 'volume' ? 'volume.' + volumeKey(answers) : q.id + '.title');
+  $('#q-help').textContent = q.help ? t(q.id + '.help') : '';
+  $('#count').textContent = t('count').replace('{n}', step + 1).replace('{total}', QUESTIONS.length);
   const body = $('#q-body');
-  const ask = q.ask && `<div class="reveal" id="q-ask" inert><div><div class="field"><label for="q-text">${q.ask.label} <span>(optional)</span></label><input id="q-text" type="text" autocomplete="off"></div></div></div>`;
-  body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}">${q.options.map(optionHtml).join('')}</div>${ask || ''}`;
-  body.querySelectorAll('.opt').forEach((b) => (b.onclick = () => pick(q, q.options[b.dataset.i])));
+  const ask = q.ask && `<div class="reveal" id="q-ask" inert><div><div class="field"><label for="q-text">${esc(t(q.id + '.ask'))} <span class="hint">${esc(t('optional'))}</span></label><input id="q-text" type="text" autocomplete="off"></div></div></div>`;
+  const more = q.more && `<div class="reveal" id="q-more" inert><div>
+    <div class="more-title">${esc(t(q.id + '.more.title'))}</div>
+    <div class="options compact multi" id="q-countries">${q.more.list.map((o, i) => `<button class="opt" type="button" data-c="${i}" aria-pressed="false"><span class="main">${esc(t('country.' + o.k))}</span></button>`).join('')}</div>
+    <div class="field more-field"><label for="q-more-text">${esc(t(q.id + '.more.ask'))} <span class="hint">${esc(t('optional'))}</span></label><input id="q-more-text" type="text" autocomplete="off"></div>
+  </div></div>`;
+  body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}" id="q-opts">${q.options.map((o, i) => optionHtml(q, o, i)).join('')}</div>${more || ''}${ask || ''}`;
+  body.querySelectorAll('#q-opts .opt').forEach((b) => (b.onclick = () => pick(q, q.options[b.dataset.i].v)));
+  if (q.more) {
+    body.querySelectorAll('#q-countries .opt').forEach((b) => (b.onclick = () => pickMore(q, q.more.list[b.dataset.c].v)));
+    const input = $('#q-more-text');
+    input.value = answers[q.more.textId] || '';
+    input.oninput = () => (answers[q.more.textId] = input.value.trim());
+  }
   if (q.ask) {
     const input = $('#q-text');
     input.value = answers[q.ask.id] || '';
@@ -408,11 +441,18 @@ function renderQuestion() {
 function paint(q) {
   const chosen = [].concat(answers[q.id] || []);
   const full = q.max && chosen.length >= q.max;
-  $('#q-body').querySelectorAll('.opt').forEach((b) => {
-    const on = chosen.includes(q.options[b.dataset.i]);
+  $('#q-opts').querySelectorAll('.opt').forEach((b) => {
+    const on = chosen.includes(q.options[b.dataset.i].v);
     b.setAttribute('aria-pressed', on);
     b.disabled = full && !on;
   });
+  if (q.more) {
+    const open = chosen.includes(q.more.on);
+    if (!open) { delete answers[q.more.id]; delete answers[q.more.textId]; $('#q-more-text').value = ''; }
+    $('#q-countries').querySelectorAll('.opt').forEach((b) => b.setAttribute('aria-pressed', (answers[q.more.id] || []).includes(q.more.list[b.dataset.c].v)));
+    $('#q-more').classList.toggle('open', open);
+    $('#q-more').inert = !open;
+  }
   if (q.ask) {
     const open = answers[q.id] === q.ask.on;
     if (!open) { delete answers[q.ask.id]; $('#q-text').value = ''; }
@@ -422,13 +462,22 @@ function paint(q) {
   $('#next').disabled = !chosen.length;
 }
 
+function pickMore(q, value) {
+  const set = answers[q.more.id] || [];
+  const next = set.includes(value) ? set.filter((v) => v !== value) : [...set, value];
+  answers[q.more.id] = q.more.list.map((o) => o.v).filter((v) => next.includes(v)); // list order, like Q4's own options
+  paint(q);
+}
+
 function pick(q, value) {
   if (q.multi) {
     const set = answers[q.id] || [];
+    const opening = q.more && value === q.more.on && !set.includes(value);
     answers[q.id] = set.includes(value) ? set.filter((v) => v !== value) : !q.max || set.length < q.max ? [...set, value] : set;
     // Keep the form's option order, which the Sheet's columns read.
-    answers[q.id] = q.options.filter((o) => answers[q.id].includes(o));
+    answers[q.id] = q.options.map((o) => o.v).filter((v) => answers[q.id].includes(v));
     paint(q);
+    if (opening) setTimeout(() => $('#q-more').scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300);
   } else if (q.ask && value === q.ask.on) {
     // Stay on this screen: tap again to deselect, otherwise open the follow-up field.
     answers[q.id] = answers[q.id] === value ? undefined : value;
@@ -474,15 +523,15 @@ $('#details').onsubmit = (e) => {
   const f = e.target.elements;
   const d = { name: f.name.value.trim(), company: f.company.value.trim(), email: f.email.value.trim(), phone: f.phone.value.trim() };
   const ok = [
-    check('#f-name', d.name, 'Please enter your name.'),
-    check('#f-company', d.company, 'Please enter your company.'),
-    check('#f-email', EMAIL.test(d.email), 'Please enter a valid email.'),
+    check('#f-name', d.name, t('err.name')),
+    check('#f-company', d.company, t('err.company')),
+    check('#f-email', EMAIL.test(d.email), t('err.email')),
   ].every(Boolean);
   $('#consent-box').classList.toggle('bad', !f.consent.checked);
   if (!ok || !f.consent.checked) return;
 
   enqueue(payload(answers, d));
-  $('#thanks-title').textContent = `Thank you, ${d.name.split(/\s+/)[0]}.`;
+  $('#thanks-title').textContent = t('thanks.title').replace('{name}', () => d.name.split(/\s+/)[0]);
   $('#thanks-line').textContent = thanksLine(answers);
   show('thanks');
   flush();
@@ -494,6 +543,9 @@ function payload(a, d) {
     if (q.id === 'volume' || !a[q.id]) continue;
     [].concat(a[q.id]).forEach((v) => p.append('entry.' + q.entry, v));
     if (q.ask && a[q.id] === q.ask.on && a[q.ask.id]) p.append('entry.' + q.ask.entry, a[q.ask.id]);
+    // Extra countries and free text go to their own Form question, one comma-joined answer.
+    const extra = q.more && a[q.id].includes(q.more.on) && [...(a[q.more.id] || []), a[q.more.textId]].filter(Boolean).join(', ');
+    if (extra) p.append('entry.' + q.more.entry, extra);
   }
   if (a.volume) p.append('entry.' + VOLUME_QUESTIONS[volumeKey(a)].entry, a.volume);
   for (const k of ['name', 'company', 'email', 'phone']) if (d[k]) p.append('entry.' + DETAILS[k], d[k]);
@@ -596,7 +648,69 @@ function exportView(msg = '') {
   $('#x-queued').textContent = queue().length;
   $('#x-msg').textContent = storageOk ? msg : 'Private mode: leads are not saved on this device';
 }
+// Wording: the built-in text is in this file (static text in the HTML as data-t, the rest above), and the team edits it in the
+// Sheet "Kiosk κείμενα" (tab Texts, one row per key). A blank or missing row keeps the built-in text. The last good copy is
+// cached, and new text is only taken on the welcome screen, so a visitor never sees the wording change half way.
+const TEXTS_URL = 'https://docs.google.com/spreadsheets/d/1GIlCsNbtw3rxXuhz70V5ooyr3SAF2ut_uz3GOhQArBg/gviz/tq?tqx=out:csv&sheet=Texts';
+const TEXTS_KEY = 'ws-kiosk-texts';
+const DEF = {
+  count: '{n} of {total}',
+  'thanks.title': 'Thank you, {name}.',
+  'thanks.creator': "Thanks for stopping by. We'll be in touch.",
+  'thanks.partner': "We'll walk you through how partners offer Renfluence to their own clients.",
+  'thanks.clients': "We'll show you Renfluence Enterprise now, live on one of your clients.",
+  'thanks.brand': "We'll show you Renfluence Enterprise now, live on your own brand.",
+  'thanks.edge': "We'll show you Renfluence Edge now: paste any profile or video and see what's really in it.",
+  'err.name': 'Please enter your name.',
+  'err.company': 'Please enter your company.',
+  'err.email': 'Please enter a valid email.',
+};
+document.querySelectorAll('[data-t]').forEach((el) => (DEF[el.dataset.t] = el.textContent));
+for (const [k, v] of Object.entries(VOLUME_QUESTIONS)) DEF['volume.' + k] = v.title;
+for (const q of QUESTIONS) {
+  if (q.id !== 'volume') DEF[q.id + '.title'] = q.title;
+  if (q.help) DEF[q.id + '.help'] = q.help;
+  if (q.ask) DEF[q.id + '.ask'] = q.ask.label;
+  if (q.more) {
+    DEF[q.id + '.more.title'] = 'Which other countries?';
+    DEF[q.id + '.more.ask'] = q.more.label;
+    for (const o of q.more.list) DEF['country.' + o.k] = o.v;
+  }
+  for (const o of q.options) { const [main, sub] = split(o.v); DEF[`${q.id}.${o.k}`] = main; if (sub) DEF[`${q.id}.${o.k}.sub`] = sub; }
+}
+let T = get(TEXTS_KEY), fresh = null;
+const t = (key) => (T[key] || '').trim() || DEF[key];
+function adopt() {
+  if (fresh) { T = fresh; fresh = null; }
+  document.querySelectorAll('[data-t]').forEach((el) => (el.textContent = t(el.dataset.t)));
+}
+function parseCsv(s) {
+  const rows = [[]]; let row = rows[0], f = '', q = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) { if (c !== '"') f += c; else if (s[i + 1] === '"') { f += '"'; i++; } else q = false; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); f = ''; rows.push((row = [])); }
+    else if (c !== '\r') f += c;
+  }
+  row.push(f);
+  return rows;
+}
+async function loadTexts() {
+  try {
+    const r = await fetch(TEXTS_URL, { cache: 'no-store', signal: timeout(10000) });
+    if (!r.ok) return;
+    const rows = parseCsv(await r.text()).map(([k, v]) => [k.trim(), v]).filter(([k]) => k in DEF);
+    if (!rows.length) return; // a Google error page or an empty tab: keep what we have
+    fresh = Object.fromEntries(rows.filter(([, v]) => v?.trim()));
+    put(TEXTS_KEY, fresh);
+    if (screen === 'welcome') adopt();
+  } catch { /* offline: the cached or built-in text stays */ }
+}
 show('welcome');
+loadTexts();
+setInterval(loadTexts, 300000);
 if (params.has('export')) {
   show('export');
   exportView();
