@@ -1,7 +1,7 @@
 // End-to-end check in headless Chrome: every screen on common tablet and phone sizes in both orientations
 // (screenshots plus a layout audit), the Q7 and thank-you rules, the idle and thank-you resets, the lead archive
 // and CSV export, private-mode storage, the offline queue, the wording Sheet (stubbed CSV: edited label, unchanged post, cache,
-// blank cell, error page) and Q4's "Other in Europe" countries.
+// blank cell, error page), Q4's "Other in Europe" and "Elsewhere" lists and the optional «Something else» text on Q1 and Q2.
 // Usage: node check.mjs [page-url] [screenshot-dir]
 // By default formResponse is intercepted and answered locally. LIVE=1 lets the offline-queue submission
 // (name "TEST Koulouris kiosk offline", tablet "TEST") through to the real Google Form: one row in the Sheet,
@@ -190,7 +190,26 @@ try {
     await snap(tag, `${tag}-01-welcome`);
     await click('#start');
     await tap('Agency'); await tap('Government'); await snap(tag, `${tag}-02-q1-type-max2`);
+    // "Something else" opens a text field on the same screen (optional, never posted). Tapping it again closes and clears it.
+    const ASK = `({ open: document.querySelector('#q-ask').classList.contains('open'), inert: document.querySelector('#q-ask').inert, focus: document.activeElement.id,
+      val: document.querySelector('#q-text').value, label: document.querySelector('label[for=q-text]').firstChild.textContent.trim(),
+      high: document.querySelector('#q-ask').getBoundingClientRect().height > 40, count: document.querySelector('#count').textContent, screen })`;
+    await tap('Government'); await tap('Something else'); await sleep(500);
+    assert.deepEqual(await js(ASK), { open: true, inert: false, focus: 'q-text', val: '', label: 'What describes you?', high: true, count: '1 of 8', screen: 'question' }, tag + ': Q1 field opens inline');
+    await fill('#q-text', 'Podcaster'); await input('#q-text'); await snap(tag, `${tag}-02b-q1-something-else`);
+    assert.deepEqual(await js(`[answers.typeOther, answers.type.length, document.querySelector('#next').disabled]`), ['Podcaster', 2, false], tag + ': Q1 text kept, Next never blocked');
+    await tap('Something else'); await sleep(400);
+    assert.deepEqual(await js(`[document.querySelector('#q-ask').classList.contains('open'), document.querySelector('#q-ask').inert, document.querySelector('#q-text').value, answers.typeOther ?? null, answers.type.length]`),
+      [false, true, '', null, 1], tag + ': tapping again closes and clears Q1');
+    await tap('Government');
     await click('#next'); await snap(tag, `${tag}-03-q2-role`);
+    await tap('Something else'); await sleep(600);
+    assert.deepEqual(await js(ASK), { open: true, inert: false, focus: 'q-text', val: '', label: 'What is your role?', high: true, count: '2 of 8', screen: 'question' }, tag + ': Q2 field opens inline and stays on Q2');
+    await fill('#q-text', 'Chief vibes officer'); await input('#q-text'); await snap(tag, `${tag}-03b-q2-something-else`);
+    assert.equal(await js(`answers.roleOther`), 'Chief vibes officer');
+    await tap('Something else'); await sleep(400);
+    assert.deepEqual(await js(`[document.querySelector('#q-ask').classList.contains('open'), document.querySelector('#q-ask').inert, document.querySelector('#q-text').value, answers.roleOther ?? null, answers.role ?? null]`),
+      [false, true, '', null, null], tag + ': tapping again closes and clears Q2');
     await tap('Director'); await sleep(400);
     await tap('Our own brand'); await snap(tag, `${tag}-04-q3-for-whom`);
     await click('#next'); await tap('Portugal'); await tap('Greece'); await snap(tag, `${tag}-05-q4-markets`);
@@ -200,6 +219,18 @@ try {
       { open: true, more: ['Italy', 'Spain'], count: '4 of 8' }, tag + ': extra countries open inline, in list order');
     await tap('Other in Europe'); await sleep(400);
     assert.deepEqual(await js(`({ open: document.querySelector('#q-more').classList.contains('open'), more: answers.more ?? null })`), { open: false, more: null }, tag + ': closing clears them');
+    // "Elsewhere" opens its own list and field below, the same way. Both can be open at once, each clears only itself.
+    const OPEN = (id) => `document.querySelector('#q-${id}').classList.contains('open')`;
+    await tap('Elsewhere'); await sleep(500); await tap('Brazil'); await tap('Asia'); await snap(tag, `${tag}-05c-q4-elsewhere`);
+    assert.deepEqual(await js(`({ el: ${OPEN('elsewhere')}, eu: ${OPEN('more')}, inert: document.querySelector('#q-elsewhere').inert, list: answers.elsewhere, count: document.querySelector('#count').textContent,
+      high: document.querySelector('#q-elsewhere').getBoundingClientRect().height > 40, title: document.querySelector('#q-elsewhere .more-title').textContent })`),
+      { el: true, eu: false, inert: false, list: ['Asia', 'Brazil'], count: '4 of 8', high: true, title: 'Which regions or countries?' }, tag + ': Elsewhere opens its own list, in list order');
+    await tap('Other in Europe'); await sleep(500); await tap('Spain'); await snap(tag, `${tag}-05d-q4-both-open`);
+    assert.deepEqual(await js(`[${OPEN('elsewhere')}, ${OPEN('more')}, answers.elsewhere, answers.more]`), [true, true, ['Asia', 'Brazil'], ['Spain']], tag + ': both open at once');
+    await tap('Elsewhere'); await sleep(400);
+    assert.deepEqual(await js(`[${OPEN('elsewhere')}, document.querySelector('#q-elsewhere').inert, ${OPEN('more')}, answers.elsewhere ?? null, answers.elsewhereText ?? null, answers.more]`),
+      [false, true, true, null, null, ['Spain']], tag + ': closing Elsewhere clears only Elsewhere');
+    await tap('Other in Europe'); await sleep(400);
     await click('#next'); await tap('Finding'); await tap('Seeing'); await tap('Tracking'); await snap(tag, `${tag}-06-q5-help-max3`);
     await click('#next'); await snap(tag, `${tag}-07-q6-today`);
     await tap('Another platform'); await sleep(500);
@@ -297,6 +328,49 @@ try {
   assert.equal(eu.answers['Other markets'], 'Spain, Moldova');
   assert.equal(new URLSearchParams((await archive())[0].body).get('entry.496172218'), null, 'no «Other markets» without Other in Europe');
   console.log('q4 other in europe: ok');
+
+  // One visit with the open-ended answers set by `opts`; returns the archived record.
+  async function visit(name, { q1 = 'Agency', q1text, q2 = 'Director', q2text, q4 = [], q4text = {} }) {
+    await go(PAGE);
+    await click('#start');
+    await tap(q1); if (q1text) { await fill('#q-text', q1text); await input('#q-text'); }
+    await click('#next');
+    await tap(q2); if (q2text) { await fill('#q-text', q2text); await input('#q-text'); await click('#next'); } else await sleep(400);
+    await tap('Our own brand'); await click('#next');
+    await tap('Portugal'); for (const l of q4) { await tap(l); await sleep(400); }
+    for (const [sel, v] of Object.entries(q4text)) { await fill(sel, v); await input(sel); }
+    await click('#next'); await tap('Finding'); await click('#next'); await tap('Our own tool'); await sleep(400);
+    await tap('4 to 10'); await sleep(400); await tap('In the next'); await sleep(400);
+    await fill('#f-name', name); await fill('#f-company', 'Check Co'); await fill('#f-email', 'open.ended@example.com');
+    await js(`document.querySelector('#f-consent').checked = true`);
+    await click('#details button[type=submit]');
+    const r = (await archive()).at(-1);
+    return { r, b: new URLSearchParams(r.body) };
+  }
+  // Elsewhere alone, then with Other in Europe: one comma-joined «Other markets», Q4's own checkbox untouched.
+  let v = await visit('Elsewhere Only', { q4: ['Elsewhere', 'Brazil', 'Asia'], q4text: { '#q-elsewhere-text': 'Chile' } });
+  assert.deepEqual(v.b.getAll('entry.1319317527'), ['Portugal', 'Elsewhere'], 'Q4 posts only its own options');
+  assert.deepEqual(v.b.getAll('entry.496172218'), ['Asia, Brazil, Chile'], 'Elsewhere posts to «Other markets»');
+  assert.equal(v.r.answers['Other markets'], 'Asia, Brazil, Chile');
+  v = await visit('Elsewhere Both', { q4: ['Other in Europe', 'Spain', 'Elsewhere', 'Asia'], q4text: { '#q-more-text': 'Moldova', '#q-elsewhere-text': 'Kenya' } });
+  assert.deepEqual(v.b.getAll('entry.1319317527'), ['Portugal', 'Other in Europe', 'Elsewhere'], 'Q4 posts only its own options');
+  assert.deepEqual(v.b.getAll('entry.496172218'), ['Spain, Moldova, Asia, Kenya'], 'both groups post, nothing lost');
+  // Text only, no list pick, still posts.
+  v = await visit('Elsewhere Text', { q4: ['Elsewhere'], q4text: { '#q-elsewhere-text': 'Kenya' } });
+  assert.deepEqual(v.b.getAll('entry.496172218'), ['Kenya']);
+  console.log('q4 elsewhere: ok');
+
+  // «Something else» on Q1 and Q2: the Form has no free-text option for them, so the Form body is exactly what it was
+  // and the typed text lives only in the archive record (and the CSV).
+  v = await visit('Other Text', { q1: 'Something else', q1text: 'Podcaster, "live"', q2: 'Something else', q2text: 'Chief vibes officer' });
+  assert.deepEqual([v.b.getAll('entry.1697022334'), v.b.getAll('entry.1788746037')], [['Something else'], ['Something else']], 'Q1 and Q2 post only their option');
+  assert.ok([...v.b.values()].every((x) => !/Podcaster|vibes/.test(x)), 'the typed text is not posted');
+  assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['Podcaster, "live"', 'Chief vibes officer']);
+  v = await visit('No Other Text', {});
+  assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['', ''], 'other leads have no text');
+  v = await visit('Empty Other Text', { q1: 'Something else', q2: 'Something else', q2text: ' ' });
+  assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['', ''], 'the field is optional, nobody is blocked');
+  console.log('something else: ok (text kept in the archive, not posted)');
 
   // The wording Sheet. Two leads with the same taps, built-in text then edited text: the posted bodies are identical.
   const CSV = (rows) => rows.map((r) => r.map((v) => '"' + v.replace(/"/g, '""') + '"').join(',')).join('\r\n') + '\r\n';
@@ -443,7 +517,7 @@ try {
   assert.deepEqual(rows[0], ['Timestamp', 'Which best describes you?', 'What is your role?', 'Who would you use it for?', 'Which markets do you work in?',
     'What would help you most?', 'How do you handle this today?', 'Which platform?', 'How many clients do you run social or creator work for?',
     'How many campaigns or topics do you follow in a year?', 'How many creator or social campaigns do you run in a year?',
-    'When would this be useful to you?', 'Full name', 'Company', 'Work email', 'Phone', 'Consent', 'Tablet', 'Other markets', 'Sent']);
+    'When would this be useful to you?', 'Full name', 'Company', 'Work email', 'Phone', 'Consent', 'Tablet', 'Other markets', 'Q1 other text', 'Q2 other text', 'Sent']);
   const col = (n) => rows[0].indexOf(n), last = rows.at(-1);
   assert.match(rows[1][0], ATHENS_ISO);
   assert.equal(rows[1][col('Full name')], 'Inês Carvalho');
@@ -451,6 +525,9 @@ try {
   assert.equal(last[col('Company')], `'=HYPERLINK("http://x")`);
   assert.equal(last[col('Phone')], '+351 912 847 193');
   assert.equal(last[col('Tablet')], 'Tablet 1 · Petros');
+  const ot = rows.find((r) => r[col('Full name')] === 'Other Text');
+  assert.deepEqual([ot[col('Q1 other text')], ot[col('Q2 other text')]], ['Podcaster, "live"', 'Chief vibes officer'], 'the CSV carries the typed text');
+  assert.equal(rows.find((r) => r[col('Full name')] === 'Elsewhere Both')[col('Other markets')], 'Spain, Moldova, Asia, Kenya');
   assert.equal(rows[1][col('Tablet')], '', 'leads taken before the name was set have no tablet');
   assert.match(last[col('Sent')], ATHENS_ISO);
   assert.ok(raw.toString('utf8').split('\r\n')[1].startsWith('"'), 'fields are quoted');

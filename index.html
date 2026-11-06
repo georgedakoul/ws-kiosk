@@ -301,23 +301,32 @@ const QUESTIONS = [
   { id: 'type', entry: '1697022334', title: 'Which best describes you?', help: 'Choose one, or two if both apply.', multi: true, max: 2, options: O({
     agency: 'Agency (creative, social, media or influencer)', brand: 'Brand (in-house marketing, content or social)',
     gov: 'Government or public body (communications offices and public organisations)',
-    tech: 'Tech or reseller partner (you build or resell marketing technology)', creator: 'Creator (you make the content yourself)', other: 'Something else' }) },
+    tech: 'Tech or reseller partner (you build or resell marketing technology)', creator: 'Creator (you make the content yourself)', other: 'Something else' }),
+    // "Something else" opens a text field. The Form's «Something else» is a plain option with no free-text response, so the text is
+    // never posted: it stays in the local archive and CSV (last columns) until the Form gets a question for it.
+    ask: { on: 'Something else', id: 'typeOther', local: true, column: 'Q1 other text', label: 'What describes you?' } },
   { id: 'role', entry: '1788746037', title: 'What is your role?', options: O({
-    founder: 'Founder, owner or CEO', director: 'Director or Head of', manager: 'Manager or lead', specialist: 'Specialist or executive', other: 'Something else' }) },
+    founder: 'Founder, owner or CEO', director: 'Director or Head of', manager: 'Manager or lead', specialist: 'Specialist or executive', other: 'Something else' }),
+    ask: { on: 'Something else', id: 'roleOther', local: true, column: 'Q2 other text', label: 'What is your role?' } },
   { id: 'use', entry: '1783443947', title: 'Who would you use it for?', help: 'Choose all that apply.', multi: true, cols: 1, options: O({
     own: 'Our own brand or work (your content, your campaigns)', clients: 'Our clients (campaigns and content you run for others)',
     resell: 'To resell or build into our offer (as a partner, reseller or integration)' }) },
   { id: 'markets', entry: '1319317527', title: 'Which markets do you work in?', help: 'Choose all that apply.', multi: true, cols: 3, options: O({
     greece: 'Greece', portugal: 'Portugal', uk: 'United Kingdom', germany: 'Germany', uae: 'United Arab Emirates', saudi: 'Saudi Arabia', qatar: 'Qatar',
     poland: 'Poland', romania: 'Romania', czechia: 'Czech Republic', europe: 'Other in Europe', elsewhere: 'Elsewhere' }),
-    // "Other in Europe" opens more countries and a text field on this screen. They post as one answer to the extra Form question
-    // «Other markets», so Q4's own checkbox (which the Sheet scores) still gets only its original options.
-    more: { on: 'Other in Europe', id: 'more', textId: 'moreText', entry: '496172218', column: 'Other markets', label: 'Which market?', list: O({
+    // "Other in Europe" and "Elsewhere" each open more choices and a text field on this screen. Both post as one answer to the extra
+    // Form question «Other markets», so Q4's own checkbox (which the Sheet scores) still gets only its original options.
+    more: { entry: '496172218', column: 'Other markets', groups: [
+    { on: 'Other in Europe', id: 'more', textId: 'moreText', title: 'Which other countries?', label: 'Which market?', list: O({
       albania: 'Albania', austria: 'Austria', belgium: 'Belgium', bosnia: 'Bosnia and Herzegovina', bulgaria: 'Bulgaria', croatia: 'Croatia',
       cyprus: 'Cyprus', denmark: 'Denmark', estonia: 'Estonia', finland: 'Finland', france: 'France', hungary: 'Hungary', iceland: 'Iceland',
       ireland: 'Ireland', italy: 'Italy', kosovo: 'Kosovo', latvia: 'Latvia', liechtenstein: 'Liechtenstein', lithuania: 'Lithuania',
       luxembourg: 'Luxembourg', malta: 'Malta', montenegro: 'Montenegro', netherlands: 'Netherlands', macedonia: 'North Macedonia',
-      norway: 'Norway', serbia: 'Serbia', slovakia: 'Slovakia', slovenia: 'Slovenia', spain: 'Spain', sweden: 'Sweden', switzerland: 'Switzerland' }) } },
+      norway: 'Norway', serbia: 'Serbia', slovakia: 'Slovakia', slovenia: 'Slovenia', spain: 'Spain', sweden: 'Sweden', switzerland: 'Switzerland' }) },
+    { on: 'Elsewhere', id: 'elsewhere', textId: 'elsewhereText', title: 'Which regions or countries?', label: 'Which market?', list: O({
+      northamerica: 'North America', latam: 'Latin America', middleeast: 'Middle East', asia: 'Asia', africa: 'Africa', oceania: 'Oceania',
+      usa: 'United States', canada: 'Canada', mexico: 'Mexico', brazil: 'Brazil', turkey: 'Turkey', israel: 'Israel', egypt: 'Egypt',
+      southafrica: 'South Africa', india: 'India', china: 'China', japan: 'Japan', singapore: 'Singapore', australia: 'Australia' }) }] } },
   { id: 'help', entry: '502166819', title: 'What would help you most?', help: 'Choose up to three.', multi: true, max: 3, options: O({
     creators: 'Finding and vetting the right creators (audience, consistency and past brand partners)',
     competitors: 'Seeing what competitors run, and with whom (including where they pay creators)',
@@ -347,11 +356,13 @@ const DEVICE_ENTRY = '938892717';
 // Sheet column order: Q1 to Q6, the inline platform, the three Q7 wordings, Q8, then the details.
 const COLUMNS = [
   ...QUESTIONS.flatMap((q) => q.id === 'volume' ? Object.values(VOLUME_QUESTIONS).map((v) => ({ label: v.title, entry: v.entry }))
-    : [{ label: q.title, entry: q.entry }, ...(q.ask ? [{ label: q.ask.label, entry: q.ask.entry }] : [])]),
+    : [{ label: q.title, entry: q.entry }, ...(q.ask && !q.ask.local ? [{ label: q.ask.label, entry: q.ask.entry }] : [])]),
   { label: 'Full name', entry: DETAILS.name }, { label: 'Company', entry: DETAILS.company }, { label: 'Work email', entry: DETAILS.email },
   { label: 'Phone', entry: DETAILS.phone }, { label: 'Consent', entry: DETAILS.consent }, { label: 'Tablet', entry: DEVICE_ENTRY },
   // The Form added this question after the others, so the Sheet has it last.
   { label: QUESTIONS.find((q) => q.more).more.column, entry: QUESTIONS.find((q) => q.more).more.entry },
+  // Archive and CSV only, never posted.
+  ...QUESTIONS.filter((q) => q.ask && q.ask.local).map((q) => ({ label: q.ask.column, local: true })),
 ];
 
 const $ = (s) => document.querySelector(s);
@@ -416,18 +427,18 @@ function renderQuestion() {
   $('#count').textContent = t('count').replace('{n}', step + 1).replace('{total}', QUESTIONS.length);
   const body = $('#q-body');
   const ask = q.ask && `<div class="reveal" id="q-ask" inert><div><div class="field"><label for="q-text">${esc(t(q.id + '.ask'))} <span class="hint">${esc(t('optional'))}</span></label><input id="q-text" type="text" autocomplete="off"></div></div></div>`;
-  const more = q.more && `<div class="reveal" id="q-more" inert><div>
-    <div class="more-title">${esc(t(q.id + '.more.title'))}</div>
-    <div class="options compact multi" id="q-countries">${q.more.list.map((o, i) => `<button class="opt" type="button" data-c="${i}" aria-pressed="false"><span class="main">${esc(t('country.' + o.k))}</span></button>`).join('')}</div>
-    <div class="field more-field"><label for="q-more-text">${esc(t(q.id + '.more.ask'))} <span class="hint">${esc(t('optional'))}</span></label><input id="q-more-text" type="text" autocomplete="off"></div>
-  </div></div>`;
-  body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}" id="q-opts">${q.options.map((o, i) => optionHtml(q, o, i)).join('')}</div>${more || ''}${ask || ''}`;
+  const more = (q.more ? q.more.groups : []).map((g) => `<div class="reveal" id="q-${g.id}" inert><div>
+    <div class="more-title">${esc(t(`${q.id}.${g.id}.title`))}</div>
+    <div class="options compact multi" id="q-${g.id}-list">${g.list.map((o, i) => `<button class="opt" type="button" data-c="${i}" aria-pressed="false"><span class="main">${esc(t('country.' + o.k))}</span></button>`).join('')}</div>
+    <div class="field more-field"><label for="q-${g.id}-text">${esc(t(`${q.id}.${g.id}.ask`))} <span class="hint">${esc(t('optional'))}</span></label><input id="q-${g.id}-text" type="text" autocomplete="off"></div>
+  </div></div>`).join('');
+  body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}" id="q-opts">${q.options.map((o, i) => optionHtml(q, o, i)).join('')}</div>${more}${ask || ''}`;
   body.querySelectorAll('#q-opts .opt').forEach((b) => (b.onclick = () => pick(q, q.options[b.dataset.i].v)));
-  if (q.more) {
-    body.querySelectorAll('#q-countries .opt').forEach((b) => (b.onclick = () => pickMore(q, q.more.list[b.dataset.c].v)));
-    const input = $('#q-more-text');
-    input.value = answers[q.more.textId] || '';
-    input.oninput = () => (answers[q.more.textId] = input.value.trim());
+  for (const g of q.more ? q.more.groups : []) {
+    body.querySelectorAll(`#q-${g.id}-list .opt`).forEach((b) => (b.onclick = () => pickMore(q, g, g.list[b.dataset.c].v)));
+    const input = $(`#q-${g.id}-text`);
+    input.value = answers[g.textId] || '';
+    input.oninput = () => (answers[g.textId] = input.value.trim());
   }
   if (q.ask) {
     const input = $('#q-text');
@@ -446,15 +457,15 @@ function paint(q) {
     b.setAttribute('aria-pressed', on);
     b.disabled = full && !on;
   });
-  if (q.more) {
-    const open = chosen.includes(q.more.on);
-    if (!open) { delete answers[q.more.id]; delete answers[q.more.textId]; $('#q-more-text').value = ''; }
-    $('#q-countries').querySelectorAll('.opt').forEach((b) => b.setAttribute('aria-pressed', (answers[q.more.id] || []).includes(q.more.list[b.dataset.c].v)));
-    $('#q-more').classList.toggle('open', open);
-    $('#q-more').inert = !open;
+  for (const g of q.more ? q.more.groups : []) {
+    const open = chosen.includes(g.on);
+    if (!open) { delete answers[g.id]; delete answers[g.textId]; $(`#q-${g.id}-text`).value = ''; }
+    $(`#q-${g.id}-list`).querySelectorAll('.opt').forEach((b) => b.setAttribute('aria-pressed', (answers[g.id] || []).includes(g.list[b.dataset.c].v)));
+    $(`#q-${g.id}`).classList.toggle('open', open);
+    $(`#q-${g.id}`).inert = !open;
   }
   if (q.ask) {
-    const open = answers[q.id] === q.ask.on;
+    const open = chosen.includes(q.ask.on);
     if (!open) { delete answers[q.ask.id]; $('#q-text').value = ''; }
     $('#q-ask').classList.toggle('open', open);
     $('#q-ask').inert = !open;
@@ -462,22 +473,26 @@ function paint(q) {
   $('#next').disabled = !chosen.length;
 }
 
-function pickMore(q, value) {
-  const set = answers[q.more.id] || [];
+function pickMore(q, g, value) {
+  const set = answers[g.id] || [];
   const next = set.includes(value) ? set.filter((v) => v !== value) : [...set, value];
-  answers[q.more.id] = q.more.list.map((o) => o.v).filter((v) => next.includes(v)); // list order, like Q4's own options
+  answers[g.id] = g.list.map((o) => o.v).filter((v) => next.includes(v)); // list order, like Q4's own options
   paint(q);
 }
 
 function pick(q, value) {
   if (q.multi) {
     const set = answers[q.id] || [];
-    const opening = q.more && value === q.more.on && !set.includes(value);
+    const opening = q.more && q.more.groups.find((g) => g.on === value && !set.includes(value));
     answers[q.id] = set.includes(value) ? set.filter((v) => v !== value) : !q.max || set.length < q.max ? [...set, value] : set;
     // Keep the form's option order, which the Sheet's columns read.
     answers[q.id] = q.options.map((o) => o.v).filter((v) => answers[q.id].includes(v));
     paint(q);
-    if (opening) setTimeout(() => $('#q-more').scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300);
+    if (opening) setTimeout(() => $(`#q-${opening.id}`).scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300);
+    else if (q.ask && value === q.ask.on && answers[q.id].includes(value)) {
+      $('#q-text').focus({ preventScroll: true });
+      setTimeout(() => $('#q-text').scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300);
+    }
   } else if (q.ask && value === q.ask.on) {
     // Stay on this screen: tap again to deselect, otherwise open the follow-up field.
     answers[q.id] = answers[q.id] === value ? undefined : value;
@@ -530,7 +545,7 @@ $('#details').onsubmit = (e) => {
   $('#consent-box').classList.toggle('bad', !f.consent.checked);
   if (!ok || !f.consent.checked) return;
 
-  enqueue(payload(answers, d));
+  enqueue(payload(answers, d), Object.fromEntries(QUESTIONS.filter((q) => q.ask && q.ask.local).map((q) => [q.ask.column, answers[q.ask.id] || ''])));
   $('#thanks-title').textContent = t('thanks.title').replace('{name}', () => d.name.split(/\s+/)[0]);
   $('#thanks-line').textContent = thanksLine(answers);
   show('thanks');
@@ -542,9 +557,10 @@ function payload(a, d) {
   for (const q of QUESTIONS) {
     if (q.id === 'volume' || !a[q.id]) continue;
     [].concat(a[q.id]).forEach((v) => p.append('entry.' + q.entry, v));
-    if (q.ask && a[q.id] === q.ask.on && a[q.ask.id]) p.append('entry.' + q.ask.entry, a[q.ask.id]);
+    if (q.ask && !q.ask.local && a[q.id] === q.ask.on && a[q.ask.id]) p.append('entry.' + q.ask.entry, a[q.ask.id]);
     // Extra countries and free text go to their own Form question, one comma-joined answer.
-    const extra = q.more && a[q.id].includes(q.more.on) && [...(a[q.more.id] || []), a[q.more.textId]].filter(Boolean).join(', ');
+    // Each open group adds its list, then its text, in group order.
+    const extra = q.more && q.more.groups.filter((g) => a[q.id].includes(g.on)).flatMap((g) => [...(a[g.id] || []), a[g.textId]]).filter(Boolean).join(', ');
     if (extra) p.append('entry.' + q.more.entry, extra);
   }
   if (a.volume) p.append('entry.' + VOLUME_QUESTIONS[volumeKey(a)].entry, a.volume);
@@ -593,9 +609,9 @@ navigator.storage?.persist?.()?.catch(() => {});
 // A no-cors POST that Google rejects still looks sent, so the archive is the only copy that cannot be lost that way.
 const queue = () => get(QUEUE_KEY);
 function saveQueue(q) { put(QUEUE_KEY, q); dot(); }
-function enqueue(body) {
+function enqueue(body, local = {}) {
   const id = Date.now() + '-' + Math.random().toString(36).slice(2), p = new URLSearchParams(body);
-  const answers = Object.fromEntries(COLUMNS.map((c) => [c.label, p.getAll('entry.' + c.entry).join(', ')]));
+  const answers = Object.fromEntries(COLUMNS.map((c) => [c.label, c.local ? local[c.label] || '' : p.getAll('entry.' + c.entry).join(', ')]));
   put(ARCHIVE_KEY, [...get(ARCHIVE_KEY), { id, ts: athens(), device: device(), answers, body, sent: null }]);
   saveQueue([...queue(), { id, body }]);
 }
@@ -672,9 +688,11 @@ for (const q of QUESTIONS) {
   if (q.help) DEF[q.id + '.help'] = q.help;
   if (q.ask) DEF[q.id + '.ask'] = q.ask.label;
   if (q.more) {
-    DEF[q.id + '.more.title'] = 'Which other countries?';
-    DEF[q.id + '.more.ask'] = q.more.label;
-    for (const o of q.more.list) DEF['country.' + o.k] = o.v;
+    for (const g of q.more.groups) {
+      DEF[`${q.id}.${g.id}.title`] = g.title;
+      DEF[`${q.id}.${g.id}.ask`] = g.label;
+      for (const o of g.list) DEF['country.' + o.k] = o.v;
+    }
   }
   for (const o of q.options) { const [main, sub] = split(o.v); DEF[`${q.id}.${o.k}`] = main; if (sub) DEF[`${q.id}.${o.k}.sub`] = sub; }
 }

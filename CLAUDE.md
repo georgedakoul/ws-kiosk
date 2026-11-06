@@ -23,9 +23,13 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   and `DEF`. A new key needs a row in the Sheet (the built-in text is its default).
 - Editing wording never changes what is posted: options post their original `v` (Form value), looked up by option key `k`,
   and the consent post is always the original `CONSENT`. Adding or removing a question or option is a code change.
-- Q4 «Other in Europe» opens more countries and a «Which market?» field on the same screen. They post as one answer to the
-  extra Form question «Other markets» (`entry.496172218`, optional, same section as Q4), never to Q4's own checkbox, so the
-  Sheet's scoring still reads Q4 as before. In the leads Sheet the column sits after «Tablet» and before «Score».
+- Q4 «Other in Europe» and «Elsewhere» each open their own list and a «Which market?» field on the same screen (`q.more.groups`).
+  Both post as one answer to the extra Form question «Other markets» (`entry.496172218`, optional, same section as Q4), list then
+  text per open group, comma-joined, never to Q4's own checkbox, so the Sheet's scoring still reads Q4 as before. In the leads
+  Sheet the column sits after «Tablet» and before «Score».
+- Q1 and Q2 «Something else» open an optional text field (`ask` with `local: true`). The Form's «Something else» is a plain option
+  with no free-text response, so the text is **not posted**: it lives only in the archive and CSV (columns «Q1 other text», «Q2 other
+  text», after «Other markets»). Landing it in the leads Sheet needs a new optional Form question per field.
 
 ## Never lose a lead
 
