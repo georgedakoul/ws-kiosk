@@ -302,12 +302,12 @@ const QUESTIONS = [
     agency: 'Agency (creative, social, media or influencer)', brand: 'Brand (in-house marketing, content or social)',
     gov: 'Government or public body (communications offices and public organisations)',
     tech: 'Tech or reseller partner (you build or resell marketing technology)', creator: 'Creator (you make the content yourself)', other: 'Something else' }),
-    // "Something else" opens a text field. The Form's «Something else» is a plain option with no free-text response, so the text is
-    // never posted: it stays in the local archive and CSV (last columns) until the Form gets a question for it.
-    ask: { on: 'Something else', id: 'typeOther', local: true, column: 'Q1 other text', label: 'What describes you?' } },
+    // "Something else" opens a text field. The Form's «Something else» is a plain option with no free-text response, so the text
+    // goes to its own optional Form question (last columns of the Sheet), and the option itself is posted unchanged.
+    ask: { on: 'Something else', id: 'typeOther', entry: '415824857', column: 'Q1 other text', label: 'What describes you?' } },
   { id: 'role', entry: '1788746037', title: 'What is your role?', options: O({
     founder: 'Founder, owner or CEO', director: 'Director or Head of', manager: 'Manager or lead', specialist: 'Specialist or executive', other: 'Something else' }),
-    ask: { on: 'Something else', id: 'roleOther', local: true, column: 'Q2 other text', label: 'What is your role?' } },
+    ask: { on: 'Something else', id: 'roleOther', entry: '1228148969', column: 'Q2 other text', label: 'What is your role?' } },
   { id: 'use', entry: '1783443947', title: 'Who would you use it for?', help: 'Choose all that apply.', multi: true, cols: 1, options: O({
     own: 'Our own brand or work (your content, your campaigns)', clients: 'Our clients (campaigns and content you run for others)',
     resell: 'To resell or build into our offer (as a partner, reseller or integration)' }) },
@@ -356,13 +356,13 @@ const DEVICE_ENTRY = '938892717';
 // Sheet column order: Q1 to Q6, the inline platform, the three Q7 wordings, Q8, then the details.
 const COLUMNS = [
   ...QUESTIONS.flatMap((q) => q.id === 'volume' ? Object.values(VOLUME_QUESTIONS).map((v) => ({ label: v.title, entry: v.entry }))
-    : [{ label: q.title, entry: q.entry }, ...(q.ask && !q.ask.local ? [{ label: q.ask.label, entry: q.ask.entry }] : [])]),
+    : [{ label: q.title, entry: q.entry }, ...(q.ask && !q.ask.column ? [{ label: q.ask.label, entry: q.ask.entry }] : [])]),
   { label: 'Full name', entry: DETAILS.name }, { label: 'Company', entry: DETAILS.company }, { label: 'Work email', entry: DETAILS.email },
   { label: 'Phone', entry: DETAILS.phone }, { label: 'Consent', entry: DETAILS.consent }, { label: 'Tablet', entry: DEVICE_ENTRY },
-  // The Form added this question after the others, so the Sheet has it last.
+  // The Form got these questions after the others, so the Sheet has them last, in this order.
   { label: QUESTIONS.find((q) => q.more).more.column, entry: QUESTIONS.find((q) => q.more).more.entry },
-  // Archive and CSV only, never posted.
-  ...QUESTIONS.filter((q) => q.ask && q.ask.local).map((q) => ({ label: q.ask.column, local: true })),
+  // An `ask` with a `column` is a separate Form question at the end; one without (the platform) sits inline after its question.
+  ...QUESTIONS.filter((q) => q.ask && q.ask.column).map((q) => ({ label: q.ask.column, entry: q.ask.entry })),
 ];
 
 const $ = (s) => document.querySelector(s);
@@ -545,7 +545,7 @@ $('#details').onsubmit = (e) => {
   $('#consent-box').classList.toggle('bad', !f.consent.checked);
   if (!ok || !f.consent.checked) return;
 
-  enqueue(payload(answers, d), Object.fromEntries(QUESTIONS.filter((q) => q.ask && q.ask.local).map((q) => [q.ask.column, answers[q.ask.id] || ''])));
+  enqueue(payload(answers, d));
   $('#thanks-title').textContent = t('thanks.title').replace('{name}', () => d.name.split(/\s+/)[0]);
   $('#thanks-line').textContent = thanksLine(answers);
   show('thanks');
@@ -557,7 +557,7 @@ function payload(a, d) {
   for (const q of QUESTIONS) {
     if (q.id === 'volume' || !a[q.id]) continue;
     [].concat(a[q.id]).forEach((v) => p.append('entry.' + q.entry, v));
-    if (q.ask && !q.ask.local && a[q.id] === q.ask.on && a[q.ask.id]) p.append('entry.' + q.ask.entry, a[q.ask.id]);
+    if (q.ask && [].concat(a[q.id]).includes(q.ask.on) && a[q.ask.id]) p.append('entry.' + q.ask.entry, a[q.ask.id]);
     // Extra countries and free text go to their own Form question, one comma-joined answer.
     // Each open group adds its list, then its text, in group order.
     const extra = q.more && q.more.groups.filter((g) => a[q.id].includes(g.on)).flatMap((g) => [...(a[g.id] || []), a[g.textId]]).filter(Boolean).join(', ');
@@ -609,9 +609,9 @@ navigator.storage?.persist?.()?.catch(() => {});
 // A no-cors POST that Google rejects still looks sent, so the archive is the only copy that cannot be lost that way.
 const queue = () => get(QUEUE_KEY);
 function saveQueue(q) { put(QUEUE_KEY, q); dot(); }
-function enqueue(body, local = {}) {
+function enqueue(body) {
   const id = Date.now() + '-' + Math.random().toString(36).slice(2), p = new URLSearchParams(body);
-  const answers = Object.fromEntries(COLUMNS.map((c) => [c.label, c.local ? local[c.label] || '' : p.getAll('entry.' + c.entry).join(', ')]));
+  const answers = Object.fromEntries(COLUMNS.map((c) => [c.label, p.getAll('entry.' + c.entry).join(', ')]));
   put(ARCHIVE_KEY, [...get(ARCHIVE_KEY), { id, ts: athens(), device: device(), answers, body, sent: null }]);
   saveQueue([...queue(), { id, body }]);
 }

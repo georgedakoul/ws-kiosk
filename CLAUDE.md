@@ -27,9 +27,11 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   Both post as one answer to the extra Form question «Other markets» (`entry.496172218`, optional, same section as Q4), list then
   text per open group, comma-joined, never to Q4's own checkbox, so the Sheet's scoring still reads Q4 as before. In the leads
   Sheet the column sits after «Tablet» and before «Score».
-- Q1 and Q2 «Something else» open an optional text field (`ask` with `local: true`). The Form's «Something else» is a plain option
-  with no free-text response, so the text is **not posted**: it lives only in the archive and CSV (columns «Q1 other text», «Q2 other
-  text», after «Other markets»). Landing it in the leads Sheet needs a new optional Form question per field.
+- Q1 and Q2 «Something else» open an optional text field (`ask`). The Form's «Something else» is a plain option with no free-text
+  response, so the typed text posts to two extra optional short-answer Form questions at the end of the details section, «Q1 other text»
+  (`entry.415824857`) and «Q2 other text» (`entry.1228148969`). Q1 and Q2 themselves still post only their option. In the leads Sheet
+  they sit after «Other markets» and before «Score» (the archive and CSV use the same order). The Form keeps a column for a deleted
+  question, so never delete and re-add a Form question: the Sheet gets a dead duplicate column.
 
 ## Never lose a lead
 
@@ -56,7 +58,7 @@ screenshots in `~/.local/state/pi-subagents/ws-kiosk-check/`, the Q7 and thank-y
 thank-you resets, the archive and CSV export, private-mode storage, the wording Sheet with a stubbed CSV (edited label shown,
 posted body unchanged, cache offline, blank cell falls back, error page ignored), Q4's extra countries, and the offline queue
 with `formResponse` intercepted. `ONLY=1280x800` limits the sizes. `LIVE=1` sends the offline-queue lead (name «TEST Koulouris
-kiosk offline», tablet «TEST») to the real form, so delete that Sheet row after.
+kiosk offline», tablet «TEST») to the real form (Q1 and Q2 «Something else» with the texts «TEST q1 other» and «TEST q2 other»), so delete that Sheet row after.
 Healthy output ends with:
 
 ```

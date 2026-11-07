@@ -104,10 +104,13 @@ async function snap(tag, name) {
 }
 
 // One whole visit through the kiosk, ending on the thank-you screen.
-async function lead({ name = 'Check Person', company = 'Check Co', email = 'check.person@example.com', phone = '', platform = false, agency = 'Agency' } = {}) {
+async function lead({ name = 'Check Person', company = 'Check Co', email = 'check.person@example.com', phone = '', platform = false, agency = 'Agency', typeText = '', roleText = '' } = {}) {
   await click('#start');
-  await tap(agency); await click('#next');
-  await tap('Director'); await sleep(400);
+  await tap(typeText ? 'Something else' : agency);
+  if (typeText) { await fill('#q-text', typeText); await input('#q-text'); }
+  await click('#next');
+  await tap(roleText ? 'Something else' : 'Director'); await sleep(400);
+  if (roleText) { await fill('#q-text', roleText); await input('#q-text'); await click('#next'); }
   await tap('Our own brand'); await click('#next');
   await tap('Portugal'); await click('#next');
   await tap('Finding'); await click('#next');
@@ -190,7 +193,7 @@ try {
     await snap(tag, `${tag}-01-welcome`);
     await click('#start');
     await tap('Agency'); await tap('Government'); await snap(tag, `${tag}-02-q1-type-max2`);
-    // "Something else" opens a text field on the same screen (optional, never posted). Tapping it again closes and clears it.
+    // "Something else" opens a text field on the same screen (optional). Tapping it again closes and clears it.
     const ASK = `({ open: document.querySelector('#q-ask').classList.contains('open'), inert: document.querySelector('#q-ask').inert, focus: document.activeElement.id,
       val: document.querySelector('#q-text').value, label: document.querySelector('label[for=q-text]').firstChild.textContent.trim(),
       high: document.querySelector('#q-ask').getBoundingClientRect().height > 40, count: document.querySelector('#count').textContent, screen })`;
@@ -360,17 +363,19 @@ try {
   assert.deepEqual(v.b.getAll('entry.496172218'), ['Kenya']);
   console.log('q4 elsewhere: ok');
 
-  // «Something else» on Q1 and Q2: the Form has no free-text option for them, so the Form body is exactly what it was
-  // and the typed text lives only in the archive record (and the CSV).
+  // «Something else» on Q1 and Q2: the Form's option has no free-text response, so the typed text posts to its own optional
+  // Form question, and the option itself is posted exactly as before.
   v = await visit('Other Text', { q1: 'Something else', q1text: 'Podcaster, "live"', q2: 'Something else', q2text: 'Chief vibes officer' });
-  assert.deepEqual([v.b.getAll('entry.1697022334'), v.b.getAll('entry.1788746037')], [['Something else'], ['Something else']], 'Q1 and Q2 post only their option');
-  assert.ok([...v.b.values()].every((x) => !/Podcaster|vibes/.test(x)), 'the typed text is not posted');
+  assert.deepEqual([v.b.getAll('entry.1697022334'), v.b.getAll('entry.1788746037')], [['Something else'], ['Something else']], 'Q1 and Q2 still post only their option');
+  assert.deepEqual([v.b.getAll('entry.415824857'), v.b.getAll('entry.1228148969')], [['Podcaster, "live"'], ['Chief vibes officer']], 'the typed text posts to its own questions');
   assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['Podcaster, "live"', 'Chief vibes officer']);
   v = await visit('No Other Text', {});
   assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['', ''], 'other leads have no text');
+  assert.deepEqual([v.b.getAll('entry.415824857'), v.b.getAll('entry.1228148969')], [[], []], 'nothing posted without the text');
   v = await visit('Empty Other Text', { q1: 'Something else', q2: 'Something else', q2text: ' ' });
   assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['', ''], 'the field is optional, nobody is blocked');
-  console.log('something else: ok (text kept in the archive, not posted)');
+  assert.deepEqual([v.b.getAll('entry.415824857'), v.b.getAll('entry.1228148969')], [[], []], 'an empty field posts nothing');
+  console.log('something else: ok (typed text posts to its own Form questions)');
 
   // The wording Sheet. Two leads with the same taps, built-in text then edited text: the posted bodies are identical.
   const CSV = (rows) => rows.map((r) => r.map((v) => '"' + v.replace(/"/g, '""') + '"').join(',')).join('\r\n') + '\r\n';
@@ -570,7 +575,7 @@ try {
   offline = true;
   await page('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await sleep(300);
-  await lead({ name: 'TEST Koulouris kiosk offline', company: 'TEST', email: 'test.kiosk@example.com', platform: true });
+  await lead({ name: 'TEST Koulouris kiosk offline', company: 'TEST', email: 'test.kiosk@example.com', platform: true, typeText: 'TEST q1 other', roleText: 'TEST q2 other' });
   await sleep(1500);
   const whileOffline = await js(`({ queued: queue().length, dot: document.getElementById('dot').className, count: document.getElementById('dot').textContent, screen })`);
   assert.deepEqual(whileOffline, { queued: 1, dot: 'queued', count: '1', screen: 'thanks' });
@@ -583,6 +588,7 @@ try {
   assert.equal(body.get('entry.241266100'), 'Another platform');
   assert.equal(body.get('pageHistory'), '0,1,2,3,4,5,6,7,8,9,10');
   assert.equal(body.get('entry.938892717'), LIVE ? 'TEST' : null);
+  assert.deepEqual([body.get('entry.415824857'), body.get('entry.1228148969')], ['TEST q1 other', 'TEST q2 other']);
   await shot('offline-queued-dot');
   offline = false;
   await page('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
