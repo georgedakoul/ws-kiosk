@@ -23,6 +23,7 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   and `DEF`. A new key needs a row in the Sheet (the built-in text is its default).
 - Editing wording never changes what is posted: options post their original `v` (Form value), looked up by option key `k`,
   and the consent post is always the original `CONSENT`. Adding or removing a question or option is a code change.
+- Q4 «United States», «Latin America» and «Asia» are plain top-level options (before «Elsewhere», score 5 in the Sheet, nothing opens); the Elsewhere list does not repeat them.
 - Q4 «Other in Europe» and «Elsewhere» each open their own list and a «Which market?» field on the same screen (`q.more.groups`).
   Both post as one answer to the extra Form question «Other markets» (`entry.496172218`, optional, same section as Q4), list then
   text per open group, comma-joined, never to Q4's own checkbox, so the Sheet's scoring still reads Q4 as before. In the leads
@@ -32,6 +33,16 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   (`entry.415824857`) and «Q2 other text» (`entry.1228148969`). Q1 and Q2 themselves still post only their option. In the leads Sheet
   they sit after «Other markets» and before «Score» (the archive and CSV use the same order). The Form keeps a column for a deleted
   question, so never delete and re-add a Form question: the Sheet gets a dead duplicate column.
+
+## Questions follow Petros's doc (10 Nov update)
+
+- New options: Q1 «Startup (a young company growing its brand)» (after Brand, score 25, routed like Brand), Q4 United States, Latin America, Asia, Q5
+  «Relevant content trends and media search (find videos by context: what is said and shown)» (no routing effect, max 3 holds). Q5 has nine options, so `dense` tightens it to fit 1280x800.
+- **Release order**: the Form's options and the leads Sheet's formulas first (Score `V1`: add `Startup \(` to the Brand 25 branch and `United States|Latin America|Asia` to the
+  Elsewhere 5 branch of the market regex; Band `W1`: add `Startup \(` to the Agency|Brand|Government|Tech list, else Startup lands in «Check with Petros»), then push `index.html`.
+  A posted option the Form lacks loses the lead. A test lead with Startup, Director or Head of, Own brand, United States, trends, Our own tool, 4 to 10, next 3 months scores 78 Hot, Edge.
+- Wording-only differences from the doc stay out of the Form: Q2 casing (Director or Head, Manager or Lead, Specialist or Executive) and Q5 creators «audience, content mix, performance and past brand partners»
+  are Sheet rows (`role.*`, `help.creators.sub`); the posted values are still the Form's. The Sheet's explicit rows beat the built-in text, so editing `index.html` alone never changes them.
 
 ## Never lose a lead
 
@@ -55,6 +66,7 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   are skipped unless the property `TEST_TO` is george.koulouris@renfluence.com (then only he gets it). `OFFER_TEXT` (voucher line) is empty on purpose until
   the team confirms an offer. The same address is mailed once per 6 hours. With the `gmail` provider set the key property to any text. The core of `thank-you.gs` is identical in ei-kiosk and ws-kiosk (only the brand block and the HTML differ): change both. Editor functions: `dryRun` (logs, sends nothing), `sendTestMail` (one mail to George, needs the key). New scope
   `script.external_request` (and full Gmail access, from the fallback's `GmailApp`): pasting this code needs `install()` run again at once, even with the flag off, or the trigger stops with an authorisation error. The consent line says "contact me about this conversation" and does not name email: George decides on adding "including by email" before switching this on.
+- The welcome panel shows `brand.tagline` «Where Content Meets Clarity» (no full stop) under the logo in #00F0FF (4.2:1 on #0051FD, so large bold only); the same line with a full stop is still `intro.tagline`.
 - The layout scales with `rem` from `html { font-size: clamp(...) }`. Option areas scroll inside on short screens, never sideways.
 
 ## Check
