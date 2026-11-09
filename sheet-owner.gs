@@ -39,20 +39,24 @@ function onLeadSubmit(e) {
   // Test leads set Owner but send no mail to the owner. The owner mail goes only to a team address.
   if (!lead.name.startsWith('TEST')) try { sendLead_(lead, OWNER_EMAIL[owner]); } catch (err) { console.error('mail failed: ' + err); }
   // The visitor's thank-you (thank-you.gs): off unless SEND_THANK_YOU and the key are set. A failure here must not stop anything else.
-  if (SEND_THANK_YOU) try { thankYouRow_(sh, row, col, get, lead.name, lead.email); } catch (err) { console.error('thank-you step failed, row ' + row + ': ' + err); }
+  if (SEND_THANK_YOU) try { thankYouRow_(sh, row, get, lead.name, lead.email); } catch (err) { console.error('thank-you step failed, row ' + row + ': ' + err); }
 }
 
 // Lead as thank-you.gs wants it. consent: the Form's required checkbox leaves its text in «Consent»; a row without it gets no email.
 const leadOf_ = (key, name, email, consent) => ({ key, name, firstName: name.trim().split(/\s+/)[0], email: email.trim(), consent: !!String(consent).trim() });
 
 // One send per row, under the script lock because two tablets can submit at once. The marker column is added at the right on first use.
-function thankYouRow_(sh, row, col, get, name, email) {
+// ponytail: the provider call runs inside this lock (30 s wait); a lock timeout loses that one thank-you, never the lead.
+function thankYouRow_(sh, row, get, name, email) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    if (!col[MARK]) { col[MARK] = sh.getLastColumn() + 1; sh.getRange(1, col[MARK]).setValue(MARK).setFontWeight('bold'); }
-    const cell = sh.getRange(row, col[MARK]);
-    return mail_(leadOf_(SpreadsheetApp.getActive().getId() + '-' + row, name, email, get('Consent')), { get: () => String(cell.getValue()), set: (v) => cell.setValue(v) });
+    // The marker column is looked up inside the lock: a second tablet may have added it since `col` was read.
+    const heads = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map((h) => String(h).trim());
+    let c = heads.indexOf(MARK) + 1;
+    if (!c) { c = heads.length + 1; sh.getRange(1, c).setValue(MARK).setFontWeight('bold'); }
+    const cell = sh.getRange(row, c), key = [SpreadsheetApp.getActive().getId(), row, get('Timestamp')].join('-'); // per submission, stable when rows move
+    return mail_(leadOf_(key, name, email, get('Consent')), { get: () => String(cell.getValue()), set: (v) => { cell.setValue(v); SpreadsheetApp.flush(); } }); // flush: "sending" must be saved before the provider is called
   } finally {
     lock.releaseLock();
   }
@@ -60,9 +64,11 @@ function thankYouRow_(sh, row, col, get, name, email) {
 
 // The last 3 rows as dryRun (thank-you.gs) wants them.
 function recentLeads_() {
-  const sh = SpreadsheetApp.getActive().getSheets()[0], heads = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map((h) => String(h).trim());
-  const last = sh.getLastRow(), first = Math.max(2, last - 2), at = (r, h) => (heads.includes(h) ? String(r[heads.indexOf(h)]) : '');
-  return last < 2 ? [] : sh.getRange(first, 1, last - first + 1, heads.length).getValues().map((r, i) => ({ row: first + i, marker: at(r, MARK),
+  const sh = SpreadsheetApp.getActive().getSheets()[0], last = sh.getLastRow();
+  if (last < 2) return [];
+  const heads = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map((h) => String(h).trim());
+  const first = Math.max(2, last - 2), at = (r, h) => (heads.includes(h) ? String(r[heads.indexOf(h)]) : '');
+  return sh.getRange(first, 1, last - first + 1, heads.length).getValues().map((r, i) => ({ row: first + i, marker: at(r, MARK),
     lead: leadOf_('dry-' + (first + i), at(r, 'Full name'), at(r, 'Work email'), at(r, 'Consent')) }));
 }
 

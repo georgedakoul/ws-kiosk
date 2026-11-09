@@ -53,8 +53,8 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   provider MailerSend (`EMAIL_PROVIDER` property switches to `resend` or `gmail`, the info@ alias fallback). Sends only to «Work email», only when «Consent» is filled, once per
   row (column «Thank-you sent», added at the right of the leads Sheet only while the flag is on; written before the send), 300 a day at most. `TEST` names
   are skipped unless the property `TEST_TO` is george.koulouris@renfluence.com (then only he gets it). `OFFER_TEXT` (voucher line) is empty on purpose until
-  the team confirms an offer. Editor functions: `dryRun` (logs, sends nothing), `sendTestMail` (one mail to George, needs the key). New scope
-  `script.external_request`: re-run `install()` (authorises it) before relying on the trigger. The consent line says "contact me about this conversation" and does not name email: George decides on adding "including by email" before switching this on.
+  the team confirms an offer. The same address is mailed once per 6 hours. With the `gmail` provider set the key property to any text. The core of `thank-you.gs` is identical in ei-kiosk and ws-kiosk (only the brand block and the HTML differ): change both. Editor functions: `dryRun` (logs, sends nothing), `sendTestMail` (one mail to George, needs the key). New scope
+  `script.external_request` (and full Gmail access, from the fallback's `GmailApp`): pasting this code needs `install()` run again at once, even with the flag off, or the trigger stops with an authorisation error. The consent line says "contact me about this conversation" and does not name email: George decides on adding "including by email" before switching this on.
 - The layout scales with `rem` from `html { font-size: clamp(...) }`. Option areas scroll inside on short screens, never sideways.
 
 ## Check
@@ -67,7 +67,7 @@ posted body unchanged, cache offline, blank cell falls back, error page ignored)
 with `formResponse` intercepted. `ONLY=1280x800` limits the sizes. `LIVE=1` sends the offline-queue lead (name «TEST Koulouris
 kiosk offline», tablet «TEST») to the real form (Q1 and Q2 «Something else» with the texts «TEST q1 other» and «TEST q2 other»), so delete that Sheet row after.
 `node mail-check.mjs` checks the thank-you email with Apps Script stubbed (no network): validation, template fill, plan, once-only, providers, the
-`onLeadSubmit` hook off and on. Healthy output ends with `PASS (19 checks)`.
+`onLeadSubmit` hook off and on. Healthy output ends with `PASS (25 checks)`.
 Healthy `check.mjs` output ends with:
 
 ```

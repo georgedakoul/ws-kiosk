@@ -28,14 +28,15 @@ class FakeSheet {
 
 // One script project in a fresh sandbox. flag = SEND_THANK_YOU; props = Script Properties; status = what the provider answers.
 function load({ flag = false, props = {}, sheet = new FakeSheet(), status = 200, offer = '' } = {}) {
-  const calls = { fetch: [], gmail: [], owner: [] }, p = { ...props };
+  const calls = { flushes: 0, log: [], errors: [], fetch: [], gmail: [], owner: [] }, p = { ...props }, cache = {};
   const stubs = {
-    console: { log() {}, error() {} },
+    console: { log: (...a) => calls.log.push(a.join(' ')), error: (...a) => calls.errors.push(a.join(' ')) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => p[k] ?? null, setProperty: (k, v) => { p[k] = v; } }) },
-    UrlFetchApp: { fetch: (url, o) => { calls.fetch.push({ url, ...o, payload: JSON.parse(o.payload) }); return { getResponseCode: () => status, getContentText: () => JSON.stringify({ message: 'nope' }) }; } },
+    UrlFetchApp: { fetch: (url, o) => { calls.fetch.push({ url, ...o, payload: JSON.parse(o.payload), sheetThen: JSON.stringify(sheet.g), flushes: calls.flushes }); return { getResponseCode: () => status, getContentText: () => JSON.stringify({ message: 'nope' }) }; } },
     GmailApp: { sendEmail: (...a) => calls.gmail.push(a) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-    SpreadsheetApp: { getActive: () => ({ getSheets: () => [sheet], getId: () => 'SHEETID', getUrl: () => 'https://sheet' }), flush() {} },
+    SpreadsheetApp: { getActive: () => ({ getSheets: () => [sheet], getId: () => 'SHEETID', getUrl: () => 'https://sheet' }), flush: () => { calls.flushes++; } },
+    CacheService: { getScriptCache: () => ({ get: (k) => cache[k] ?? null, put: (k, v) => { cache[k] = v; } }) },
     MailApp: { sendEmail: (...a) => calls.owner.push(a) },
         Utilities: { formatDate: () => '2026-11-10 10:00', sleep() {} },
   };
@@ -146,7 +147,7 @@ ok('request: Resend and MailerSend shapes, the key only in the Authorization hea
 
 // ---- idempotency
 const memStore = (v = '') => { const s = { v, log: [], get: () => s.v, set: (x) => { s.v = x; s.log.push(x); } }; return s; };
-const deps = (o = {}) => { const d = { store: memStore(), now: new Date('2026-11-10T10:00:00Z'), sent: [], send(p) { d.sent.push(p.to); }, count: () => 0, bump() { d.bumped = (d.bumped || 0) + 1; }, ...o }; return d; };
+const deps = (o = {}) => { const d = { store: memStore(), now: new Date('2026-11-10T10:00:00Z'), sent: [], send(p) { d.sent.push(p.to); }, count: () => 0, bump() { d.bumped = (d.bumped || 0) + 1; }, recent: () => false, remember(to) { d.remembered = to; }, ...o }; return d; };
 const deliver = (l, c, d) => m0.run('deliver_')(l, c, d);
 
 ok('deliver: sends once; a retry or re-run on the same row never sends again', () => {
@@ -183,6 +184,35 @@ ok('deliver: nothing is written while off, a skip is marked once, the daily cap 
   assert.equal(nokey.store.v, 'skipped: no key'); assert.equal(nokey.sent.length, 0);
   const capped = deps({ count: () => 300 });
   assert.equal(deliver(lead(), cfg(), capped), 'skipped: daily cap'); assert.equal(capped.sent.length, 0);
+});
+
+ok('deliver: the same address is mailed once per 6 hours, except George (so a test can be repeated)', () => {
+  const d = deps({ recent: (to) => to === 'ana@hotel.pt' });
+  assert.equal(deliver(lead(), cfg(), d), 'skipped: same address');
+  assert.equal(d.sent.length, 0);
+  assert.equal(d.store.v, 'skipped: same address within 6 hours');
+  const g = deps({ recent: () => true });
+  assert.equal(deliver(lead({ name: 'TEST x' }), cfg({ testTo: GEORGE }), g), 'sent');
+  assert.equal(g.remembered, GEORGE);
+});
+
+ok('plan: the provider name is case-insensitive in config; leading space before TEST still counts as a test lead; an unknown API provider throws', () => {
+  const m = load({ props: { EMAIL_PROVIDER: ' Resend ', EMAIL_PROVIDER_KEY: 'k' } });
+  assert.equal(m.run('config_')().provider, 'resend');
+  assert.equal(plan(lead({ name: ' TEST x' }), cfg()).reason, 'test lead');
+  assert.throws(() => m0.run('request_')({ provider: 'gmail' }, 'k', 'i'), /no API/);
+});
+
+ok('mail_: the daily counter starts again on a new day and survives a corrupt value', () => {
+  for (const TY_COUNT of ['2020-01-01:299', 'garbage', '']) {
+    const m = load({ flag: true, props: { EMAIL_PROVIDER_KEY: 'k', TY_COUNT } });
+    const store = memStore();
+    assert.equal(m.run('mail_')(lead(), store), 'sent');
+    assert.match(m.props.TY_COUNT, /^\d{4}-\d\d-\d\d:1$/);
+  }
+  const today = new Date().toISOString().slice(0, 10), full = load({ flag: true, props: { EMAIL_PROVIDER_KEY: 'k', TY_COUNT: today + ':300' } });
+  assert.equal(full.run('mail_')(lead(), memStore()), 'skipped: daily cap');
+  assert.equal(full.calls.fetch.length, 0);
 });
 
 // ---- the hook in onLeadSubmit
@@ -264,6 +294,36 @@ ok('sendTestMail and dryRun: George only; the test mail refuses without a key; d
   submit(d);
   d.run('dryRun')();
   assert.equal(d.calls.fetch.length, 0);
+});
+
+ok('onLeadSubmit, flag on: the marker header is added once, "sending" is saved (flushed) before the provider is called, nothing logged as an error', () => {
+  const m = mk({ flag: true, props: { EMAIL_PROVIDER_KEY: 'k' } });
+  submit(m); submit(m, { 'Work email': 'bob@x.pt', 'Full name': 'Bob Jones' });
+  assert.equal(m.sheet.g[0].filter((h) => h === 'Thank-you sent').length, 1);
+  assert.ok(m.calls.fetch[0].flushes > 0, 'no flush before the fetch');
+  assert.match(m.calls.fetch[0].sheetThen, /sending 20/);
+  assert.deepEqual(m.calls.errors, []);
+});
+
+ok('onLeadSubmit, flag on: the same address twice in a row is mailed once; the Idempotency key is per submission', () => {
+  const m = mk({ flag: true, props: { EMAIL_PROVIDER_KEY: 'k', EMAIL_PROVIDER: 'resend' } });
+  const r1 = submit(m), r2 = submit(m, { Timestamp: '2026-11-10T09:05:00Z' });
+  assert.equal(m.calls.fetch.length, 1);
+  assert.equal(m.sheet.g[r2 - 1][MARKCOL], 'skipped: same address within 6 hours');
+  assert.equal(m.calls.fetch[0].headers['Idempotency-Key'], 'SHEETID-2-2026-11-10T09:00:00Z');
+  assert.equal(r1, 2);
+});
+
+ok('dryRun: logs the switches, the sample text and one decision per row, with no name or address of a visitor; an empty Sheet does not throw', () => {
+  const d = mk({ props: { EMAIL_PROVIDER_KEY: 'k' } });
+  submit(d); submit(d, { Consent: '', 'Full name': 'Bob Jones', 'Work email': 'bob@x.pt' });
+  d.run('dryRun')();
+  const out = d.calls.log.join('\n');
+  assert.match(out, /SEND_THANK_YOU=false, key set=true, provider=mailersend/);
+  assert.match(out, /from Renfluence <info@renfluence\.com>/);
+  assert.match(out, /row 2: would send/); assert.match(out, /row 3: would skip: no consent/);
+  assert.ok(!/ana@hotel|Ana Silva|bob@x/.test(out));
+  assert.doesNotThrow(() => load({ sheet: new FakeSheet() }).run('dryRun')());
 });
 
 console.log('PASS (' + n + ' checks)');
