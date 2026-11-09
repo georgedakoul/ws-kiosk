@@ -141,6 +141,11 @@ function parseCsv(text) {
   return rows.filter((r) => r.length);
 }
 const SIZES = [[1180, 820], [1133, 744], [1280, 800], [1024, 768], [1366, 1024], [390, 844], [360, 640], [1280, 600]];
+// Contrast of Renfluence's light blue on the brand blue (WCAG): large bold text needs 3:1.
+const lum = (hex) => [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+  .reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0);
+const contrast = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+assert.ok(contrast('#00F0FF', '#0051FD') >= 3, 'tagline contrast');
 const ATHENS_ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+0[23]:00$/;
 
 // The wording Sheet's CSV: null fails the request (offline), a string is served as the response. The real Sheet is never read.
@@ -191,6 +196,12 @@ try {
     assert.deepEqual(await js(`({ warn: document.getElementById('storage-warn').hidden, dev: document.getElementById('device').textContent, unset: document.getElementById('device').className })`),
       { warn: true, dev: 'Tablet: not set', unset: 'unset' });
     await snap(tag, `${tag}-01-welcome`);
+    // The light-blue tagline sits right under the logo, inside the blue panel, clear of the Web Summit text, and large bold text (3:1 is enough).
+    assert.deepEqual(await js(`(() => { const t = document.querySelector('.brand-tag'), l = document.querySelector('.brand img').getBoundingClientRect(),
+      b = document.querySelector('.brand').getBoundingClientRect(), p = document.querySelector('.brand p').getBoundingClientRect(), r = t.getBoundingClientRect(), cs = getComputedStyle(t);
+      return { text: t.textContent, color: cs.color, below: r.top >= l.bottom - 1 && r.top - l.bottom < 40, clear: r.bottom <= p.top,
+        inside: r.left >= b.left && r.right <= b.right, large: parseFloat(cs.fontSize) >= 18.66 && +cs.fontWeight >= 700 }; })()`),
+      { text: 'Where Content Meets Clarity', color: 'rgb(0, 240, 255)', below: true, clear: true, inside: true, large: true }, tag + ': tagline under the logo');
     await click('#start');
     await tap('Agency'); await tap('Government'); await snap(tag, `${tag}-02-q1-type-max2`);
     // "Something else" opens a text field on the same screen (optional). Tapping it again closes and clears it.
@@ -390,13 +401,14 @@ try {
   texts = CSV([['Αλλάζετε μόνο τη στήλη text.', '', ''], ['', '', ''], ['key', 'text', 'note'],
     ['intro.title', 'Edited headline', 'x'], ['start', '', 'blank cell'], ['type.agency', 'Studio', ''], ['type.agency.sub', 'film and design', ''],
     ['thanks.edge', 'Custom edge line.', ''], ['count', '{n} / {total}', ''], ['bogus.key', 'ignored', ''],
-    ['brand', 'Web Summit\nLisbon', 'two lines']]);
+    ['brand', 'Web Summit\nLisbon', 'two lines'], ['brand.tagline', 'Edited tagline', 'under the logo']]);
   await go(PAGE);
   await sleep(500);
   assert.equal(await text('.welcome-body h1'), 'Edited headline', 'a changed label shows on screen');
   assert.equal(await text('#start'), 'Start', 'a blank cell falls back to the built-in text');
   assert.deepEqual(await cached(), { 'intro.title': 'Edited headline', 'type.agency': 'Studio', 'type.agency.sub': 'film and design',
-    'thanks.edge': 'Custom edge line.', count: '{n} / {total}', brand: 'Web Summit\nLisbon' }, 'cache holds the good rows only');
+    'thanks.edge': 'Custom edge line.', count: '{n} / {total}', brand: 'Web Summit\nLisbon', 'brand.tagline': 'Edited tagline' }, 'cache holds the good rows only');
+  assert.equal(await text('.brand-tag'), 'Edited tagline', 'the tagline under the logo is editable in the wording Sheet');
   assert.equal(await js(`getComputedStyle(document.querySelector('.brand p')).whiteSpace`), 'pre-line');
   await click('#start');
   assert.deepEqual(await js(`[...document.querySelectorAll('.opt')].slice(0, 2).map(b => b.textContent)`), ['Studiofilm and design', 'Brand' + 'in-house marketing, content or social']);
