@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
 :root {
-  --blue: #0051FD; --blue-ink: #0040C9; --bg: #EEF3FF; --line: #D3DDF6;
+  --blue: #0051FD; --cyan: #00F0FF; --blue-ink: #0040C9; --bg: #EEF3FF; --line: #D3DDF6;
   --ink: #0D1830; --muted: #46536F; --white: #fff; --amber: #E59A00; --green: #1BA568; --red: #C8283C;
   --r: 0.7rem;
   font-family: "Helvetica Neue", Helvetica, Roboto, Arial, system-ui, sans-serif;
@@ -54,6 +54,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   display: flex; flex-direction: column; justify-content: space-between;
 }
 .brand img { width: 12rem; height: auto; }
+/* Renfluence's light blue on the brand blue is 4.2:1: fine for large bold text (3:1), so it stays 1.25rem and bold (18.75px on the smallest screens). */
+.brand-tag { margin-top: 0.9rem; font-size: 1.25rem; font-weight: 700; line-height: 1.2; color: var(--cyan); }
 .brand p { font-size: 1.8rem; font-weight: 700; line-height: 1.15; letter-spacing: -.01em; white-space: pre-line; }
 .welcome-body { flex: 1; overflow-y: auto; padding: 2.8rem 3.2rem 2rem; display: flex; flex-direction: column; gap: 1.4rem; }
 /* Centered with spacers rather than justify-content, which would cut off the top when the text is taller than the screen. */
@@ -209,7 +211,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 <section id="welcome" class="screen">
   <div id="storage-warn" role="alert" hidden>Private mode: leads are not saved on this device</div>
   <div class="brand">
-    <img src="logo-white.png" alt="Renfluence">
+    <div>
+      <img src="logo-white.png" alt="Renfluence">
+      <div class="brand-tag" data-t="brand.tagline">Where Content Meets Clarity</div>
+    </div>
     <div><p data-t="brand">Web Summit
 Lisbon 2026</p><span id="device"></span></div>
   </div>
