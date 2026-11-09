@@ -47,7 +47,14 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   so a throttled tablet still resets. **Next visitor** resets at once.
 - `sheet-owner.gs` is the Apps Script bound to the Sheet (copy of what runs there). `install()` creates the
   `onFormSubmit` trigger: it sets Owner from Routed owner when empty and emails that owner. Names starting with
-  `TEST` get an Owner but no email. Never mails visitors.
+  `TEST` get an Owner but no owner email.
+- `thank-you.gs` is the **second file** of that Apps Script project (paste both; `sheet-owner.gs` alone fails on the missing constants) and can mail
+  the visitor. Off twice: `SEND_THANK_YOU = false` and no Script Property `EMAIL_PROVIDER_KEY`. From and Reply-To `info@renfluence.com`,
+  provider MailerSend (`EMAIL_PROVIDER` property switches to `resend` or `gmail`, the info@ alias fallback). Sends only to «Work email», only when «Consent» is filled, once per
+  row (column «Thank-you sent», added at the right of the leads Sheet only while the flag is on; written before the send), 300 a day at most. `TEST` names
+  are skipped unless the property `TEST_TO` is george.koulouris@renfluence.com (then only he gets it). `OFFER_TEXT` (voucher line) is empty on purpose until
+  the team confirms an offer. Editor functions: `dryRun` (logs, sends nothing), `sendTestMail` (one mail to George, needs the key). New scope
+  `script.external_request`: re-run `install()` (authorises it) before relying on the trigger. The consent line says "contact me about this conversation" and does not name email: George decides on adding "including by email" before switching this on.
 - The layout scales with `rem` from `html { font-size: clamp(...) }`. Option areas scroll inside on short screens, never sideways.
 
 ## Check
@@ -59,7 +66,9 @@ thank-you resets, the archive and CSV export, private-mode storage, the wording 
 posted body unchanged, cache offline, blank cell falls back, error page ignored), Q4's extra countries, and the offline queue
 with `formResponse` intercepted. `ONLY=1280x800` limits the sizes. `LIVE=1` sends the offline-queue lead (name «TEST Koulouris
 kiosk offline», tablet «TEST») to the real form (Q1 and Q2 «Something else» with the texts «TEST q1 other» and «TEST q2 other»), so delete that Sheet row after.
-Healthy output ends with:
+`node mail-check.mjs` checks the thank-you email with Apps Script stubbed (no network): validation, template fill, plan, once-only, providers, the
+`onLeadSubmit` hook off and on. Healthy output ends with `PASS (19 checks)`.
+Healthy `check.mjs` output ends with:
 
 ```
 idle reset: ok
