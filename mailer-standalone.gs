@@ -2,7 +2,9 @@
 // It does not touch the kiosk, the Form or the capture script. LIVE: SEND_THANK_YOU is true and a 5-minute trigger runs sendPending (see mailer-standalone-README.md). Off: set it to false and run removeTrigger.
 // Per row without a «Thank-you sent» marker: validate the address, write the marker BEFORE sending, send, write the result. Never twice, and a failed send is not retried.
 // Editor functions: dryRun() (logs what would be sent per row, row numbers only, sends nothing), sendTestMail() (one mail to GEORGE only), installTrigger() / removeTrigger() (every 5 minutes).
-// The pure parts (plan_, deliver_, fill_, validAddress_, leadOf_) are checked by mailer-check.mjs.
+// Second job, notifyOwners(): a short mail to the lead's owner (Petros, Panagiotis...) from this same mailbox, once per lead, so the lead notification never leaves George's mailbox.
+// Own flag NOTIFY_OWNERS, own trigger (installNotifyTrigger, every minute), own marker column «Owner notified». dryRunNotify() logs what it would send.
+// The pure parts (plan_, deliver_, fill_, validAddress_, leadOf_, notifyPlan_, notifyDeliver_) are checked by mailer-check.mjs.
 const SEND_THANK_YOU = true;
 const SHEET_ID = '1gL3qWTlDSQkDGJT86B1mW1s3vtEy46-YD_zRfXsbxJE'; // Web Summit 2026 leads (the Form responses Sheet); this account needs Editor access (the marker column is written there)
 const FIRST_ROW = 8; // rows above this are never mailed (rows 2 to 7 are test rows from 5 Nov, junk names that do not start with TEST). Check it against dryRun() before switching on
@@ -14,6 +16,16 @@ const GEORGE = 'george.koulouris@renfluence.com'; // the only address a TEST lea
 const MARK = 'Thank-you sent'; // Sheet column, added at the right on the first real send. Empty = never tried; anything else = tried once, never again
 const DAILY_CAP = 300; // thank-yous per day (Workspace allows 1500 recipients a day)
 const PER_RUN = 40; // rows per run, well inside Apps Script's 6 minutes
+const NOTIFY_OWNERS = true; // false: notifyOwners() does nothing
+const NOTIFY_FIRST_ROW = 14; // rows above this are never notified: set at deployment to the first row the capture script's old owner mail did not cover (the Sheet's last row + 1 on the day the old mail was removed)
+const OWNER_MARK = 'Owner notified'; // Sheet column, added at the right on the first notification. Empty = never tried; anything else = tried once, never again
+// Copied from sheet-owner.gs (the owner table the capture script used). An owner that is not here gets no mail: the row is marked and logged.
+const OWNER_EMAIL = {
+  'Petros': 'petros@renfluence.com',
+  'Panagiotis': 'panagiotis@renfluence.com',
+  'George Karavokyris': 'george@renfluence.com',
+  'George Koulouris': 'george.koulouris@renfluence.com',
+};
 
 const TEXT = `Hi {{first_name}},
 
@@ -338,3 +350,89 @@ function dryRun() {
 
 function installTrigger() { removeTrigger(); ScriptApp.newTrigger('sendPending').timeBased().everyMinutes(5).create(); }
 function removeTrigger() { ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === 'sendPending').forEach((t) => ScriptApp.deleteTrigger(t)); }
+
+// ---- Owner notification ----
+const oneLine_ = (v, n) => String(v).replace(/\s+/g, ' ').trim().slice(0, n);
+
+// What the owner is told, or why nothing is. Pure. at(header) = the row's cell as text; gid = the leads tab's id; testTo = Script Property TEST_TO.
+// The owner is the «Owner» cell, else the routed owner ("Check with Petros" and anything unknown go to Petros), the same rule the capture script uses.
+function notifyPlan_(at, row, gid, testTo) {
+  const no = (reason) => ({ send: false, reason });
+  const name = oneLine_(at('Full name'), 80), company = oneLine_(at('Company'), 80), isTest = name.startsWith('TEST');
+  if (isTest && testTo !== GEORGE) return no('test lead'); // a test lead mails nobody but George, and only when TEST_TO is his address
+  const [score, band, product, routed] = ['Score', 'Band', 'Product', 'Routed owner'].map((h) => at(h).trim());
+  if (!score || !band || !product || !routed) return { send: false, wait: true, reason: 'formulas not calculated yet' }; // the Sheet fills these seconds after the row lands: try again next run
+  const owner = at('Owner').trim() || (Object.prototype.hasOwnProperty.call(OWNER_EMAIL, routed) ? routed : 'Petros');
+  const address = Object.prototype.hasOwnProperty.call(OWNER_EMAIL, owner) ? OWNER_EMAIL[owner] : '';
+  if (!address) return no('no address for owner ' + oneLine_(owner, 40));
+  const first = name.split(' ')[0] || '(no name)';
+  const link = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit#gid=' + gid + '&range=A' + row;
+  return { send: true, to: isTest ? GEORGE : address, subject: 'New Web Summit lead: ' + first + ' ' + company,
+    text: ['Name: ' + first, 'Company: ' + company, 'Business type: ' + oneLine_(at('Which best describes you?'), 120), 'Score: ' + score + ' (' + band + ')',
+      'Product: ' + product, 'Spoke with: ' + (oneLine_(at('Spoke with'), 60) || '-'), '', 'Sheet row: ' + link].concat(isTest ? ['', 'Test lead: this would have gone to ' + owner + '.'] : []).join('\n') };
+}
+
+// Tries once, never twice, like deliver_. deps = { store: { get, set } (the row's marker), send(plan), now }. Returns the log line.
+function notifyDeliver_(at, row, gid, testTo, deps) {
+  if (deps.store.get()) return 'already tried';
+  const p = notifyPlan_(at, row, gid, testTo);
+  if (p.wait) return 'waiting: ' + p.reason; // no marker: the next run looks again
+  if (!p.send) { deps.store.set('skipped: ' + p.reason); return 'skipped: ' + p.reason; }
+  const stamp = deps.now.toISOString();
+  deps.store.set('sending ' + stamp);
+  try {
+    deps.send(p);
+    deps.store.set('sent ' + stamp);
+    return 'sent';
+  } catch (err) {
+    deps.store.set('failed ' + stamp + ': ' + String(err && err.message || err).slice(0, 100));
+    return 'failed';
+  }
+}
+
+const notifySend_ = (p) => GmailApp.sendEmail(p.to, p.subject, p.text, { name: SENDER.name, replyTo: SENDER.email });
+
+// Every row from NOTIFY_FIRST_ROW that has a timestamp, as { row, at, marker } (at(header) reads the cell as text).
+function notifyRows_(sh) {
+  const heads = heads_(sh), last = sh.getLastRow(), m = heads.indexOf(OWNER_MARK);
+  if (last < NOTIFY_FIRST_ROW) return [];
+  return sh.getRange(NOTIFY_FIRST_ROW, 1, last - NOTIFY_FIRST_ROW + 1, heads.length).getValues().map((r, i) => ({ row: NOTIFY_FIRST_ROW + i, marker: m < 0 ? '' : String(r[m]).trim(),
+    at: (h) => (heads.includes(h) ? String(r[heads.indexOf(h)]) : ''), stamped: String(r[0]).trim() !== '' })).filter((r) => r.stamped);
+}
+
+// The time trigger runs this (every minute). With NOTIFY_OWNERS false it does nothing.
+function notifyOwners() {
+  if (NOTIFY_OWNERS !== true) { console.log('NOTIFY_OWNERS is false: nothing sent'); return; }
+  assertSender_();
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) { console.log('another run is busy'); return; }
+  try {
+    const sh = sheet_(), testTo = testTo_(), todo = notifyRows_(sh).filter((r) => !r.marker).slice(0, PER_RUN);
+    if (!todo.length) return;
+    let c = heads_(sh).indexOf(OWNER_MARK) + 1;
+    if (!c) { c = sh.getLastColumn() + 1; sh.getRange(1, c).setValue(OWNER_MARK).setFontWeight('bold'); }
+    todo.forEach((r) => {
+      const cell = sh.getRange(r.row, c);
+      console.log('row ' + r.row + ': ' + notifyDeliver_(r.at, r.row, sh.getSheetId(), testTo, { now: new Date(), send: notifySend_,
+        store: { get: () => String(cell.getValue()), set: (v) => { cell.setValue(v); SpreadsheetApp.flush(); } } })); // flush: "sending" must be saved before the mail goes
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// In the editor: logs what notifyOwners would do per row and sends nothing (row numbers and owner names only, no personal data).
+function dryRunNotify() {
+  const testTo = testTo_(), sh = sheet_();
+  console.log('NOTIFY_OWNERS=' + NOTIFY_OWNERS + ', runs as ' + Session.getEffectiveUser().getEmail() + ', from ' + SENDER.name + ' <' + SENDER.email + '>, TEST_TO ' + (testTo === GEORGE ? 'set' : 'not set') + ', first row ' + NOTIFY_FIRST_ROW);
+  const tally = {};
+  notifyRows_(sh).forEach((r) => {
+    const p = notifyPlan_(r.at, r.row, sh.getSheetId(), testTo), what = r.marker ? 'already ' + r.marker.split(' ')[0] : p.send ? 'would send to ' + p.to : p.wait ? 'waiting: ' + p.reason : 'would skip: ' + p.reason;
+    console.log('row ' + r.row + ': ' + what);
+    tally[what] = (tally[what] || 0) + 1;
+  });
+  console.log('summary: ' + JSON.stringify(tally));
+}
+
+function installNotifyTrigger() { removeNotifyTrigger(); ScriptApp.newTrigger('notifyOwners').timeBased().everyMinutes(1).create(); }
+function removeNotifyTrigger() { ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === 'notifyOwners').forEach((t) => ScriptApp.deleteTrigger(t)); }

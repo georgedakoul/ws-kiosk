@@ -219,21 +219,20 @@ ok('mail_: the daily counter starts again on a new day and survives a corrupt va
 const mk = (o = {}) => load({ sheet: new FakeSheet([COLS.slice()]), ...o });
 const MARKCOL = COLS.length;
 
-ok('onLeadSubmit, flag off (as shipped): owner set and mailed, no extra column, the visitor is never contacted even with a key set', () => {
+ok('onLeadSubmit, flag off (as shipped): owner set, NO owner mail from this mailbox (notifyOwners in the info@ mailer does that), no extra column, the visitor is never contacted even with a key set', () => {
   const m = mk({ props: { EMAIL_PROVIDER_KEY: 'k' } });
   const row = submit(m);
   assert.equal(m.sheet.g[row - 1][COLS.indexOf('Owner')], 'Petros');
-  assert.equal(m.calls.owner.length, 1);
-  assert.equal(m.calls.owner[0][0], 'petros@renfluence.com');
+  assert.equal(m.calls.owner.length, 0, 'the capture script sends no owner mail');
   assert.equal(m.sheet.g[0].length, MARKCOL, 'no Thank-you sent header added');
   assert.deepEqual([m.calls.fetch.length, m.calls.gmail.length], [0, 0]);
 });
 
-ok('onLeadSubmit, flag on but no key: nothing sent, row marked "skipped: no key", owner still mailed', () => {
+ok('onLeadSubmit, flag on but no key: nothing sent, row marked "skipped: no key", still no owner mail', () => {
   const m = mk({ flag: true });
   const row = submit(m);
   assert.equal(m.calls.fetch.length, 0);
-  assert.equal(m.calls.owner.length, 1);
+  assert.equal(m.calls.owner.length, 0);
   assert.equal(m.sheet.g[0][MARKCOL], 'Thank-you sent');
   assert.equal(m.sheet.g[row - 1][MARKCOL], 'skipped: no key');
 });
@@ -263,7 +262,7 @@ ok('onLeadSubmit, flag on: no consent text, a bad email or a provider error neve
   const bad = mk({ flag: true, props: { EMAIL_PROVIDER_KEY: 'k' }, status: 401 });
   const r3 = submit(bad);
   assert.match(bad.sheet.g[r3 - 1][MARKCOL], /^failed .*mailersend HTTP 401 nope/);
-  assert.equal(bad.calls.owner.length, 1);
+  assert.equal(bad.calls.owner.length, 0);
 });
 
 ok('onLeadSubmit, flag on: a TEST lead gets no owner mail, and mails only George when TEST_TO is his', () => {

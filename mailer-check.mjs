@@ -10,7 +10,8 @@ const HEAD = WS ? ['Timestamp', 'Full name', 'Work email', 'Consent', 'Tablet', 
 const row = (name, email, consent = 'I agree') => { const [f, ...l] = name.split(' '); return WS ? ['t', name, email, consent, 'T1', '70', 'Petros'] : ['t', f, l.join(' '), email, '', 'Hotel', 'T1', 'Έλη']; };
 
 class FakeSheet { // a grid; rows and columns count from 1 like Apps Script's
-  constructor(rows) { this.g = [HEAD.slice(), ...rows]; }
+  constructor(rows, head = HEAD) { this.g = [head.slice(), ...rows]; }
+  getSheetId() { return 42; }
   getLastRow() { return this.g.length; }
   getLastColumn() { return Math.max(0, ...this.g.map((r) => r.length)); }
   getRange(r, c, nr = 1, nc = 1) {
@@ -23,8 +24,8 @@ class FakeSheet { // a grid; rows and columns count from 1 like Apps Script's
   }
 }
 
-function load({ flag = true, rows = [], props = {}, user = ME, first = 2, failSend = false } = {}) {
-  const sheet = new FakeSheet(rows), p = { ...props }, cache = {}, calls = { sent: [], log: [], flushes: 0, triggers: [] };
+function load({ flag = true, rows = [], props = {}, user = ME, first = 2, failSend = false, head = HEAD, notifyFirst = 2, notify = true } = {}) {
+  const sheet = new FakeSheet(rows, head), p = { ...props }, cache = {}, calls = { sent: [], log: [], flushes: 0, triggers: [] };
   const ctx = vm.createContext({
     console: { log: (...a) => calls.log.push(a.join(' ')) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => p[k] ?? null, setProperty: (k, v) => { p[k] = v; } }) },
@@ -38,7 +39,7 @@ function load({ flag = true, rows = [], props = {}, user = ME, first = 2, failSe
   });
   const src = SRC.replace(/^const SEND_THANK_YOU = (true|false);$/m, 'const SEND_THANK_YOU = ' + flag + ';');
   assert.notEqual(src, '', 'flag line not found'); assert.match(SRC, /^const SEND_THANK_YOU = (true|false);$/m);
-  vm.runInContext(src.replace(/const FIRST_ROW = \d+;/, 'const FIRST_ROW = ' + first + ';'), ctx);
+  vm.runInContext(src.replace(/const FIRST_ROW = \d+;/, 'const FIRST_ROW = ' + first + ';').replace(/const NOTIFY_FIRST_ROW = \d+;/, 'const NOTIFY_FIRST_ROW = ' + notifyFirst + ';').replace(/const NOTIFY_OWNERS = (true|false);/, 'const NOTIFY_OWNERS = ' + notify + ';'), ctx);
   return { run: (e) => vm.runInContext(e, ctx), calls, sheet, props: p };
 }
 let n = 0;
@@ -160,4 +161,80 @@ ok('no trial length in any mail: no "trial", "15 days" or "30 days" in text or H
   const m = load({ rows: [row('Ana Silva', 'ana@hotel.pt')] }); m.run('sendPending()'); m.run('sendTestMail()');
   m.calls.sent.forEach((x) => assert.ok(!/trial|\b(15|30)[\s-]*days?\b/i.test(x.text + x.o.htmlBody)));
 });
+// Owner notification (Renfluence only): the lead mail to Petros and the others, sent from the info@ mailbox, never from George's.
+if (WS) {
+  const NH = ['Timestamp', 'Which best describes you?', 'Full name', 'Company', 'Work email', 'Consent', 'Tablet', 'Spoke with', 'Score', 'Band', 'Product', 'Routed owner', 'Owner', 'Thank-you sent'];
+  const lead = (o = {}) => { const d = { ts: 't', type: 'Agency (creative, social, media or influencer)', name: 'Ana Silva', company: 'Hotel Lisboa', email: 'ana@hotel.pt', consent: 'I agree', tablet: 'T1', who: 'Theo', score: 77, band: 'Hot', product: 'Partnership', routed: 'Petros', owner: 'Petros', ty: '', ...o };
+    return [d.ts, d.type, d.name, d.company, d.email, d.consent, d.tablet, d.who, d.score, d.band, d.product, d.routed, d.owner, d.ty]; };
+  const nload = (rows, o = {}) => load({ rows, head: NH, ...o });
+  const nmark = (m, i = 0) => m.sheet.g[1 + i][m.sheet.g[0].indexOf('Owner notified')] ?? '';
+  ok('notifyOwners: one short mail from the info@ mailbox to the owner, first name only, marker written BEFORE the send, once', () => {
+    const m = nload([lead()]); m.run('notifyOwners()'); m.run('notifyOwners()');
+    assert.equal(m.calls.sent.length, 1); const x = m.calls.sent[0];
+    assert.equal(x.to, 'petros@renfluence.com'); assert.equal(x.subject, 'New Web Summit lead: Ana Hotel Lisboa');
+    assert.equal(x.o.name, 'Renfluence'); assert.equal(x.o.replyTo, ME); assert.ok(!('from' in x.o) && !('htmlBody' in x.o), 'plain text, no alias');
+    assert.equal(x.text, ['Name: Ana', 'Company: Hotel Lisboa', 'Business type: Agency (creative, social, media or influencer)', 'Score: 77 (Hot)', 'Product: Partnership', 'Spoke with: Theo', '',
+      'Sheet row: https://docs.google.com/spreadsheets/d/1gL3qWTlDSQkDGJT86B1mW1s3vtEy46-YD_zRfXsbxJE/edit#gid=42&range=A2'].join('\n'));
+    assert.ok(!/Silva|ana@hotel/.test(x.text + x.subject), 'no surname, no email, no phone');
+    assert.match(x.sheetThen, /sending 20/); assert.match(nmark(m), /^sent 20/); assert.equal(m.sheet.g[0].at(-1), 'Owner notified'); assert.equal(m.sheet.g[0].length, NH.length + 1);
+  });
+  ok('notifyOwners: the Owner cell wins, then the routed owner; unknown routing ("Check with Petros") goes to Petros', () => {
+    const m = nload([lead({ owner: 'Panagiotis' }), lead({ owner: '', routed: 'Panagiotis', name: 'Bo Li' }), lead({ owner: '', routed: 'Check with Petros', name: 'Cy Do' }), lead({ owner: 'George Karavokyris', name: 'Di Er' })]);
+    m.run('notifyOwners()');
+    assert.deepEqual(m.calls.sent.map((x) => x.to), ['panagiotis@renfluence.com', 'panagiotis@renfluence.com', 'petros@renfluence.com', 'george@renfluence.com']);
+  });
+  ok('notifyOwners: an owner without an address is skipped, marked and logged, nobody is mailed', () => {
+    const m = nload([lead({ owner: 'Theo' }), lead({ owner: 'constructor', name: 'Bo Li' })]); m.run('notifyOwners()');
+    assert.equal(m.calls.sent.length, 0); assert.equal(nmark(m, 0), 'skipped: no address for owner Theo'); assert.equal(nmark(m, 1), 'skipped: no address for owner constructor');
+    assert.match(m.calls.log.join('\n'), /row 2: skipped: no address for owner Theo/);
+  });
+  ok('notifyOwners: TEST rows are skipped; with TEST_TO set to George only George gets it, with a line saying who it would have gone to', () => {
+    const t = [lead({ name: 'TEST Ana' })];
+    const a = nload(t); a.run('notifyOwners()'); assert.equal(a.calls.sent.length, 0); assert.equal(nmark(a), 'skipped: test lead');
+    const b = nload(t, { props: { TEST_TO: 'someone@else.com' } }); b.run('notifyOwners()'); assert.equal(b.calls.sent.length, 0);
+    const c = nload(t, { props: { TEST_TO: GEORGE } }); c.run('notifyOwners()');
+    assert.deepEqual(c.calls.sent.map((x) => x.to), [GEORGE]); assert.match(c.calls.sent[0].text, /Test lead: this would have gone to Petros\.$/); assert.equal(c.calls.sent[0].subject, 'New Web Summit lead: TEST Hotel Lisboa');
+  });
+  ok('notifyOwners: NOTIFY_FIRST_ROW protects old leads, they are never notified or marked', () => {
+    const m = nload([lead({ name: 'Old One' }), lead({ name: 'Old Two' }), lead({ name: 'New Three' })], { notifyFirst: 4 }); m.run('notifyOwners()');
+    assert.deepEqual(m.calls.sent.map((x) => x.subject), ['New Web Summit lead: New Hotel Lisboa']); assert.equal(nmark(m, 0), ''); assert.equal(nmark(m, 1), ''); assert.match(nmark(m, 2), /^sent/);
+  });
+  ok('notifyOwners: a row whose Sheet formulas have not calculated yet is left unmarked and mailed on a later run', () => {
+    const m = nload([lead({ band: '', product: '', score: '', routed: '', owner: '' })]); m.run('notifyOwners()');
+    assert.equal(m.calls.sent.length, 0); assert.equal(nmark(m), ''); assert.match(m.calls.log.join('\n'), /row 2: waiting/);
+    Object.assign(m.sheet.g[1], lead()); m.run('notifyOwners()'); assert.equal(m.calls.sent.length, 1); assert.match(nmark(m), /^sent/);
+  });
+  ok('notifyOwners: a failed send is marked failed and never retried; the row after it is still tried', () => {
+    const m = nload([lead(), lead({ name: 'Bo Li' })], { failSend: true }); m.run('notifyOwners()');
+    assert.match(nmark(m, 0), /^failed 20.*boom/); assert.match(nmark(m, 1), /^failed/); const k = m.calls.sent.length; m.run('notifyOwners()'); assert.equal(m.calls.sent.length, k);
+  });
+  ok('notifyOwners: a company with line breaks cannot break the subject into headers; a blank row is ignored', () => {
+    const m = nload([lead({ company: 'Evil\r\nBcc: x@y.com   Ltd' }), lead({ ts: '', name: '', company: '' })]); m.run('notifyOwners()');
+    assert.equal(m.calls.sent.length, 1); assert.ok(!/[\r\n]/.test(m.calls.sent[0].subject)); assert.equal(m.calls.sent[0].subject, 'New Web Summit lead: Ana Evil Bcc: x@y.com Ltd'); assert.equal(nmark(m, 1), '');
+  });
+  ok('notifyOwners: NOTIFY_OWNERS false does nothing and touches nothing; another account throws and sends nothing', () => {
+    const m = nload([lead()], { notify: false }); m.run('notifyOwners()'); assert.equal(m.calls.sent.length, 0); assert.equal(m.sheet.g[0].length, NH.length);
+    const w = nload([lead()], { user: 'george.koulouris@renfluence.com' }); assert.throws(() => w.run('notifyOwners()'), /not /); assert.equal(w.calls.sent.length, 0);
+  });
+  ok('notifyOwners and the thank-you mail have separate markers and do not disturb each other', () => {
+    const m = nload([lead()]); m.run('sendPending()'); m.run('notifyOwners()'); m.run('notifyOwners()'); m.run('sendPending()');
+    assert.deepEqual(m.calls.sent.map((x) => x.to), ['ana@hotel.pt', 'petros@renfluence.com']); assert.match(m.sheet.g[1][NH.indexOf('Thank-you sent')], /^sent/); assert.match(nmark(m), /^sent/);
+    assert.deepEqual(m.sheet.g[0].slice(0, NH.length), NH, 'no existing column moves');
+  });
+  ok('dryRunNotify sends and writes nothing, logs row numbers and owner addresses only (no visitor name, company or email)', () => {
+    const m = nload([lead(), lead({ name: 'TEST Bo' }), lead({ owner: 'Theo', name: 'Cy Do' })]); m.run('dryRunNotify()');
+    assert.equal(m.calls.sent.length, 0); assert.equal(m.sheet.g[0].length, NH.length);
+    const log = m.calls.log.join('\n'); assert.match(log, /row 2: would send to petros@renfluence.com/); assert.match(log, /row 3: would skip: test lead/); assert.match(log, /row 4: would skip: no address for owner Theo/);
+    assert.ok(!/Ana|Silva|Hotel Lisboa|ana@hotel|Bo\b|Cy Do/.test(log));
+  });
+  ok('installNotifyTrigger makes one 1-minute trigger that does not stack, leaves the thank-you trigger alone, removeNotifyTrigger removes only its own', () => {
+    const m = load(); m.run('installTrigger()'); m.run('installNotifyTrigger()'); m.run('installNotifyTrigger()');
+    assert.deepEqual(m.calls.triggers.map((t) => [t.getHandlerFunction(), t.n]), [['sendPending', 5], ['notifyOwners', 1]]);
+    m.run('removeNotifyTrigger()'); assert.deepEqual(m.calls.triggers.map((t) => t.getHandlerFunction()), ['sendPending']); m.run('removeTrigger()'); m.run('installNotifyTrigger()'); m.run('removeTrigger()'); assert.equal(m.calls.triggers.length, 1);
+  });
+  ok('the owner table has the four owners the capture script knew, all on renfluence.com', () => {
+    const t = JSON.parse(JSON.stringify(load().run('OWNER_EMAIL')));
+    assert.deepEqual(t, { Petros: 'petros@renfluence.com', Panagiotis: 'panagiotis@renfluence.com', 'George Karavokyris': 'george@renfluence.com', 'George Koulouris': 'george.koulouris@renfluence.com' });
+  });
+}
 console.log(`PASS (${n} checks)`);

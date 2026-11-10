@@ -53,6 +53,23 @@
 - Δεν έχει επιβεβαιωθεί αν ο κωδικός προσφοράς του Edge ισχύει για τη Renfluence (George ή Karavokyris να επιβεβαιώσουν), γι' αυτό το `OFFER_TEXT` είναι κενό.
 - Η διάρκεια του trial (15 ή 30 μέρες) δεν γράφεται σε κανένα email, γιατί δεν είναι επιβεβαιωμένη.
 
+## Ειδοποίηση του owner (`notifyOwners`)
+
+Δεύτερη δουλειά του ίδιου αρχείου: όταν μπαίνει νέο lead, ο owner του (Petros, Panagiotis...) παίρνει ένα σύντομο email από το info@renfluence.com. Έτσι η ειδοποίηση δεν φεύγει πια από το mailbox του George (το `sheet-owner.gs` δεν στέλνει mail, μόνο βάζει Owner).
+
+| Τι | Πού |
+|---|---|
+| Διακόπτης | `NOTIFY_OWNERS = true` (με `false` δεν κάνει τίποτα) |
+| Trigger | `installNotifyTrigger` (κάθε 1 λεπτό, δεν πειράζει τον trigger της `sendPending`), `removeNotifyTrigger` τον αφαιρεί |
+| Πρώτη γραμμή | `NOTIFY_FIRST_ROW`: βάλε την τελευταία γραμμή του Sheet + 1 την ημέρα της εγκατάστασης. Οι παλιότερες γραμμές δεν ειδοποιούνται ποτέ |
+| Δείκτης | στήλη «Owner notified» στα δεξιά του Sheet, γράφεται πριν από την αποστολή, μία προσπάθεια ανά γραμμή |
+| Παραλήπτης | η στήλη «Owner», αλλιώς «Routed owner», αλλιώς Petros. Οι διευθύνσεις είναι στο `OWNER_EMAIL` (αντίγραφο του πίνακα του παλιού script). Owner χωρίς διεύθυνση: «skipped: no address for owner X» και log |
+| Περιεχόμενο | θέμα «New Web Summit lead: <μικρό όνομα> <εταιρεία>». Σώμα: μικρό όνομα, εταιρεία, τύπος επιχείρησης, score και band, product, «Spoke with», σύνδεσμος στη γραμμή του Sheet |
+| TEST | όνομα που αρχίζει από `TEST`: παραλείπεται. Αν το `TEST_TO` είναι το `george.koulouris@renfluence.com`, πάει μόνο σε αυτόν |
+| Έλεγχος | `dryRunNotify` (log μόνο, αριθμοί γραμμών και owner). Δεν πρέπει να δείχνει «would send» για παλιά γραμμή |
+
+Εγκατάσταση: επικόλληση του αρχείου, `NOTIFY_FIRST_ROW`, Save, `dryRunNotify`, `installNotifyTrigger`. Δεν χρειάζεται νέα εξουσιοδότηση (ίδια scopes με το thank-you).
+
 ## Απαντήσεις επισκεπτών
 
 Οι απαντήσεις πάνε στο inbox του info@renfluence.com (`Reply-To`). Το email λέει «reply 'no' and we will not write again».
