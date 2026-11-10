@@ -235,12 +235,12 @@ try {
     assert.deepEqual(await js(`({ open: document.querySelector('#q-more').classList.contains('open'), more: answers.more ?? null })`), { open: false, more: null }, tag + ': closing clears them');
     // "Elsewhere" opens its own list and field below, the same way. Both can be open at once, each clears only itself.
     const OPEN = (id) => `document.querySelector('#q-${id}').classList.contains('open')`;
-    await tap('Elsewhere'); await sleep(500); await tap('Brazil'); await tap('Asia'); await snap(tag, `${tag}-05c-q4-elsewhere`);
+    await tap('Elsewhere'); await sleep(500); await tap('Brazil'); await tap('Africa'); await snap(tag, `${tag}-05c-q4-elsewhere`);
     assert.deepEqual(await js(`({ el: ${OPEN('elsewhere')}, eu: ${OPEN('more')}, inert: document.querySelector('#q-elsewhere').inert, list: answers.elsewhere, count: document.querySelector('#count').textContent,
       high: document.querySelector('#q-elsewhere').getBoundingClientRect().height > 40, title: document.querySelector('#q-elsewhere .more-title').textContent })`),
-      { el: true, eu: false, inert: false, list: ['Asia', 'Brazil'], count: '4 of 8', high: true, title: 'Which regions or countries?' }, tag + ': Elsewhere opens its own list, in list order');
+      { el: true, eu: false, inert: false, list: ['Africa', 'Brazil'], count: '4 of 8', high: true, title: 'Which regions or countries?' }, tag + ': Elsewhere opens its own list, in list order');
     await tap('Other in Europe'); await sleep(500); await tap('Spain'); await snap(tag, `${tag}-05d-q4-both-open`);
-    assert.deepEqual(await js(`[${OPEN('elsewhere')}, ${OPEN('more')}, answers.elsewhere, answers.more]`), [true, true, ['Asia', 'Brazil'], ['Spain']], tag + ': both open at once');
+    assert.deepEqual(await js(`[${OPEN('elsewhere')}, ${OPEN('more')}, answers.elsewhere, answers.more]`), [true, true, ['Africa', 'Brazil'], ['Spain']], tag + ': both open at once');
     await tap('Elsewhere'); await sleep(400);
     assert.deepEqual(await js(`[${OPEN('elsewhere')}, document.querySelector('#q-elsewhere').inert, ${OPEN('more')}, answers.elsewhere ?? null, answers.elsewhereText ?? null, answers.more]`),
       [false, true, true, null, null, ['Spain']], tag + ': closing Elsewhere clears only Elsewhere');
@@ -344,7 +344,7 @@ try {
   console.log('q4 other in europe: ok');
 
   // One visit with the open-ended answers set by `opts`; returns the archived record.
-  async function visit(name, { q1 = 'Agency', q1text, q2 = 'Director', q2text, q4 = [], q4text = {} }) {
+  async function visit(name, { q1 = 'Agency', q1text, q2 = 'Director', q2text, q4 = [], q4text = {}, q5 = ['Finding'] }) {
     await go(PAGE);
     await click('#start');
     await tap(q1); if (q1text) { await fill('#q-text', q1text); await input('#q-text'); }
@@ -353,7 +353,7 @@ try {
     await tap('Our own brand'); await click('#next');
     await tap('Portugal'); for (const l of q4) { await tap(l); await sleep(400); }
     for (const [sel, v] of Object.entries(q4text)) { await fill(sel, v); await input(sel); }
-    await click('#next'); await tap('Finding'); await click('#next'); await tap('Our own tool'); await sleep(400);
+    await click('#next'); for (const h of q5) await tap(h); await click('#next'); await tap('Our own tool'); await sleep(400);
     await tap('4 to 10'); await sleep(400); await tap('In the next'); await sleep(400);
     await fill('#f-name', name); await fill('#f-company', 'Check Co'); await fill('#f-email', 'open.ended@example.com');
     await js(`document.querySelector('#f-consent').checked = true`);
@@ -362,13 +362,13 @@ try {
     return { r, b: new URLSearchParams(r.body) };
   }
   // Elsewhere alone, then with Other in Europe: one comma-joined «Other markets», Q4's own checkbox untouched.
-  let v = await visit('Elsewhere Only', { q4: ['Elsewhere', 'Brazil', 'Asia'], q4text: { '#q-elsewhere-text': 'Chile' } });
+  let v = await visit('Elsewhere Only', { q4: ['Elsewhere', 'Brazil', 'Africa'], q4text: { '#q-elsewhere-text': 'Chile' } });
   assert.deepEqual(v.b.getAll('entry.1319317527'), ['Portugal', 'Elsewhere'], 'Q4 posts only its own options');
-  assert.deepEqual(v.b.getAll('entry.496172218'), ['Asia, Brazil, Chile'], 'Elsewhere posts to «Other markets»');
-  assert.equal(v.r.answers['Other markets'], 'Asia, Brazil, Chile');
-  v = await visit('Elsewhere Both', { q4: ['Other in Europe', 'Spain', 'Elsewhere', 'Asia'], q4text: { '#q-more-text': 'Moldova', '#q-elsewhere-text': 'Kenya' } });
+  assert.deepEqual(v.b.getAll('entry.496172218'), ['Africa, Brazil, Chile'], 'Elsewhere posts to «Other markets»');
+  assert.equal(v.r.answers['Other markets'], 'Africa, Brazil, Chile');
+  v = await visit('Elsewhere Both', { q4: ['Other in Europe', 'Spain', 'Elsewhere', 'Africa'], q4text: { '#q-more-text': 'Moldova', '#q-elsewhere-text': 'Kenya' } });
   assert.deepEqual(v.b.getAll('entry.1319317527'), ['Portugal', 'Other in Europe', 'Elsewhere'], 'Q4 posts only its own options');
-  assert.deepEqual(v.b.getAll('entry.496172218'), ['Spain, Moldova, Asia, Kenya'], 'both groups post, nothing lost');
+  assert.deepEqual(v.b.getAll('entry.496172218'), ['Spain, Moldova, Africa, Kenya'], 'both groups post, nothing lost');
   // Text only, no list pick, still posts.
   v = await visit('Elsewhere Text', { q4: ['Elsewhere'], q4text: { '#q-elsewhere-text': 'Kenya' } });
   assert.deepEqual(v.b.getAll('entry.496172218'), ['Kenya']);
@@ -387,6 +387,39 @@ try {
   assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['', ''], 'the field is optional, nobody is blocked');
   assert.deepEqual([v.b.getAll('entry.415824857'), v.b.getAll('entry.1228148969')], [[], []], 'an empty field posts nothing');
   console.log('something else: ok (typed text posts to its own Form questions)');
+
+  // Petros's doc (Lisbon kiosk: qualification questionnaire). The posted values are the live Google Form's option texts, so Q2 and Q5's
+  // first option keep the Form's wording here, and the doc's casing and «content mix» wording come from the Kiosk κείμενα Sheet.
+  const shown = await js(`QUESTIONS.map((q) => q.options.map((o) => o.v))`);
+  assert.deepEqual(shown[0], ['Agency (creative, social, media or influencer)', 'Brand (in-house marketing, content or social)', 'Startup (a young company growing its brand)',
+    'Government or public body (communications offices and public organisations)', 'Tech or reseller partner (you build or resell marketing technology)',
+    'Creator (you make the content yourself)', 'Something else'], 'Q1 as in the doc, with Startup');
+  assert.deepEqual(shown[3], ['Greece', 'Portugal', 'United Kingdom', 'Germany', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Poland', 'Romania', 'Czech Republic',
+    'Other in Europe', 'United States', 'Latin America', 'Asia', 'Elsewhere'], 'Q4 as in the doc, with the three regions before Elsewhere');
+  assert.deepEqual(shown[4], ['Finding and vetting the right creators (audience, consistency and past brand partners)',
+    'Seeing what competitors run, and with whom (including where they pay creators)', 'Content ideas and scripts for your market (based on what works in your category)',
+    'Checking a video before it goes live (what is said, shown and how it lands)', 'Tracking campaigns, Stories included (client-ready reports in minutes)',
+    'Reading how audiences really react (comments read against the video)', 'Relevant content trends and media search (find videos by context: what is said and shown)',
+    'Social data in our own tools (through API or MCP)', 'Offering Renfluence to our own clients (white-label or reseller)'], 'Q5 as in the doc, with trends and media search');
+  const sub = await js(`QUESTIONS[3].more.groups.find((g) => g.id === 'elsewhere').list.map((o) => o.v)`);
+  assert.ok(!sub.some((c) => ['United States', 'Latin America', 'Asia'].includes(c)), 'the Elsewhere list does not repeat the three top-level regions');
+  // The three regions are plain Q4 options: no list opens, they post on Q4's own checkbox (the Sheet scores them 5), nothing goes to «Other markets».
+  let r = await visit('Startup Regions', { q1: 'Startup', q4: ['United States', 'Latin America', 'Asia'], q5: ['Finding', 'Relevant'] });
+  assert.deepEqual(r.b.getAll('entry.1697022334'), ['Startup (a young company growing its brand)'], 'Startup posts the Form value');
+  assert.deepEqual(r.b.getAll('entry.1319317527'), ['Portugal', 'United States', 'Latin America', 'Asia'], 'the regions post on Q4 itself');
+  assert.deepEqual(r.b.getAll('entry.496172218'), [], 'a top-level region posts nothing to «Other markets»');
+  assert.deepEqual(r.b.getAll('entry.502166819'), ['Finding and vetting the right creators (audience, consistency and past brand partners)',
+    'Relevant content trends and media search (find videos by context: what is said and shown)'], 'the new Q5 option posts');
+  assert.equal(r.b.get('pageHistory'), '0,1,2,3,4,5,6,8,9,10');
+  assert.equal(await js(`thanksLine({ type: ['Startup (a young company growing its brand)'], use: ['Our own brand or work (your content, your campaigns)'], help: [] })`),
+    await js(`thanksLine({ type: ['Brand (in-house marketing, content or social)'], use: ['Our own brand or work (your content, your campaigns)'], help: [] })`), 'Startup routes like Brand');
+  assert.equal(await js(`volumeKey({ type: ['Startup (a young company growing its brand)'], use: ['Our own brand or work (your content, your campaigns)'] })`), 'other');
+  // Q5 still allows three at most, with nine options.
+  await go(PAGE); await click('#start'); await tap('Agency'); await click('#next'); await tap('Director'); await sleep(400); await tap('Our own brand'); await click('#next');
+  await tap('Portugal'); await click('#next');
+  for (const h of ['Finding', 'Relevant', 'Seeing', 'Tracking']) await tap(h);
+  assert.deepEqual(await js(`[answers.help.length, [...document.querySelectorAll('#q-opts .opt')].filter((b) => !b.disabled).length]`), [3, 3], 'Q5 stops at three');
+  console.log('doc update: Startup, three regions, trends option, Elsewhere without repeats');
 
   // The wording Sheet. Two leads with the same taps, built-in text then edited text: the posted bodies are identical.
   const CSV = (rows) => rows.map((r) => r.map((v) => '"' + v.replace(/"/g, '""') + '"').join(',')).join('\r\n') + '\r\n';
@@ -544,7 +577,7 @@ try {
   assert.equal(last[col('Tablet')], 'Tablet 1 · Petros');
   const ot = rows.find((r) => r[col('Full name')] === 'Other Text');
   assert.deepEqual([ot[col('Q1 other text')], ot[col('Q2 other text')]], ['Podcaster, "live"', 'Chief vibes officer'], 'the CSV carries the typed text');
-  assert.equal(rows.find((r) => r[col('Full name')] === 'Elsewhere Both')[col('Other markets')], 'Spain, Moldova, Asia, Kenya');
+  assert.equal(rows.find((r) => r[col('Full name')] === 'Elsewhere Both')[col('Other markets')], 'Spain, Moldova, Africa, Kenya');
   assert.equal(rows[1][col('Tablet')], '', 'leads taken before the name was set have no tablet');
   assert.match(last[col('Sent')], ATHENS_ISO);
   assert.ok(raw.toString('utf8').split('\r\n')[1].startsWith('"'), 'fields are quoted');

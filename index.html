@@ -90,6 +90,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .compact .opt::before { left: 0.7rem; }
 .compact .opt::after { left: 1.15rem; }
 .compact .opt .main { font-size: 0.88rem; line-height: 1.2; overflow-wrap: anywhere; }
+/* Q5 has nine options with sub lines: a little tighter, so all of them show at once on a 1280x800 tablet. */
+.options.dense { gap: 0.5rem 0.7rem; }
+.dense .opt { min-height: 3.4rem; padding-block: 0.45rem; }
 .more-title { font-size: 0.9rem; font-weight: 650; margin-bottom: 0.5rem; }
 .more-field { margin-top: 0.9rem; }
 .opt {
@@ -305,6 +308,7 @@ const O = (list) => Object.entries(list).map(([k, v]) => ({ k, v }));
 const QUESTIONS = [
   { id: 'type', entry: '1697022334', title: 'Which best describes you?', help: 'Choose one, or two if both apply.', multi: true, max: 2, options: O({
     agency: 'Agency (creative, social, media or influencer)', brand: 'Brand (in-house marketing, content or social)',
+    startup: 'Startup (a young company growing its brand)',
     gov: 'Government or public body (communications offices and public organisations)',
     tech: 'Tech or reseller partner (you build or resell marketing technology)', creator: 'Creator (you make the content yourself)', other: 'Something else' }),
     // "Something else" opens a text field. The Form's «Something else» is a plain option with no free-text response, so the text
@@ -318,7 +322,7 @@ const QUESTIONS = [
     resell: 'To resell or build into our offer (as a partner, reseller or integration)' }) },
   { id: 'markets', entry: '1319317527', title: 'Which markets do you work in?', help: 'Choose all that apply.', multi: true, cols: 3, options: O({
     greece: 'Greece', portugal: 'Portugal', uk: 'United Kingdom', germany: 'Germany', uae: 'United Arab Emirates', saudi: 'Saudi Arabia', qatar: 'Qatar',
-    poland: 'Poland', romania: 'Romania', czechia: 'Czech Republic', europe: 'Other in Europe', elsewhere: 'Elsewhere' }),
+    poland: 'Poland', romania: 'Romania', czechia: 'Czech Republic', europe: 'Other in Europe', usa: 'United States', latam: 'Latin America', asia: 'Asia', elsewhere: 'Elsewhere' }),
     // "Other in Europe" and "Elsewhere" each open more choices and a text field on this screen. Both post as one answer to the extra
     // Form question «Other markets», so Q4's own checkbox (which the Sheet scores) still gets only its original options.
     more: { entry: '496172218', column: 'Other markets', groups: [
@@ -329,16 +333,17 @@ const QUESTIONS = [
       luxembourg: 'Luxembourg', malta: 'Malta', montenegro: 'Montenegro', netherlands: 'Netherlands', macedonia: 'North Macedonia',
       norway: 'Norway', serbia: 'Serbia', slovakia: 'Slovakia', slovenia: 'Slovenia', spain: 'Spain', sweden: 'Sweden', switzerland: 'Switzerland' }) },
     { on: 'Elsewhere', id: 'elsewhere', textId: 'elsewhereText', title: 'Which regions or countries?', label: 'Which market?', list: O({
-      northamerica: 'North America', latam: 'Latin America', middleeast: 'Middle East', asia: 'Asia', africa: 'Africa', oceania: 'Oceania',
-      usa: 'United States', canada: 'Canada', mexico: 'Mexico', brazil: 'Brazil', turkey: 'Turkey', israel: 'Israel', egypt: 'Egypt',
+      northamerica: 'North America', middleeast: 'Middle East', africa: 'Africa', oceania: 'Oceania',
+      canada: 'Canada', mexico: 'Mexico', brazil: 'Brazil', turkey: 'Turkey', israel: 'Israel', egypt: 'Egypt',
       southafrica: 'South Africa', india: 'India', china: 'China', japan: 'Japan', singapore: 'Singapore', australia: 'Australia' }) }] } },
-  { id: 'help', entry: '502166819', title: 'What would help you most?', help: 'Choose up to three.', multi: true, max: 3, options: O({
+  { id: 'help', entry: '502166819', title: 'What would help you most?', help: 'Choose up to three.', multi: true, max: 3, dense: true, options: O({
     creators: 'Finding and vetting the right creators (audience, consistency and past brand partners)',
     competitors: 'Seeing what competitors run, and with whom (including where they pay creators)',
     ideas: 'Content ideas and scripts for your market (based on what works in your category)',
     check: 'Checking a video before it goes live (what is said, shown and how it lands)',
     tracking: 'Tracking campaigns, Stories included (client-ready reports in minutes)',
     audiences: 'Reading how audiences really react (comments read against the video)',
+    trends: 'Relevant content trends and media search (find videos by context: what is said and shown)',
     api: 'Social data in our own tools (through API or MCP)', whitelabel: 'Offering Renfluence to our own clients (white-label or reseller)' }) },
   { id: 'today', entry: '241266100', title: 'How do you handle this today?', options: O({
     sheets: 'Spreadsheets and manual checks', platform: 'Another platform', own: 'Our own tool', none: "We don't, yet" }),
@@ -437,7 +442,7 @@ function renderQuestion() {
     <div class="options compact multi" id="q-${g.id}-list">${g.list.map((o, i) => `<button class="opt" type="button" data-c="${i}" aria-pressed="false"><span class="main">${esc(t('country.' + o.k))}</span></button>`).join('')}</div>
     <div class="field more-field"><label for="q-${g.id}-text">${esc(t(`${q.id}.${g.id}.ask`))} <span class="hint">${esc(t('optional'))}</span></label><input id="q-${g.id}-text" type="text" autocomplete="off"></div>
   </div></div>`).join('');
-  body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''}" id="q-opts">${q.options.map((o, i) => optionHtml(q, o, i)).join('')}</div>${more}${ask || ''}`;
+  body.innerHTML = `<div class="options ${q.multi ? 'multi' : ''} ${q.cols ? 'cols' + q.cols : ''} ${q.dense ? 'dense' : ''}" id="q-opts">${q.options.map((o, i) => optionHtml(q, o, i)).join('')}</div>${more}${ask || ''}`;
   body.querySelectorAll('#q-opts .opt').forEach((b) => (b.onclick = () => pick(q, q.options[b.dataset.i].v)));
   for (const g of q.more ? q.more.groups : []) {
     body.querySelectorAll(`#q-${g.id}-list .opt`).forEach((b) => (b.onclick = () => pickMore(q, g, g.list[b.dataset.c].v)));
