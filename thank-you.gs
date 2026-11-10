@@ -28,7 +28,7 @@ Edge is our analytics product.
 
 Thanks again,
 The Renfluence team
-https://www.renfluence.com
+https://www.renfluence.ai/en/?utm_source=email&utm_medium=thankyou&utm_campaign=websummit
 
 --
 If this is not for you, reply 'no' and we will not write again.
@@ -43,8 +43,8 @@ const HTML = `<!DOCTYPE html>
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="x-apple-disable-message-reformatting">
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-<meta name="color-scheme" content="light">
-<meta name="supported-color-schemes" content="light">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
 <title>Renfluence at Web Summit Lisbon</title>
 <!--[if mso]>
 <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
@@ -54,7 +54,7 @@ const HTML = `<!DOCTYPE html>
   body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   table { border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0; }
   img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-  a { color: #0051FD; }
+  a { color: #0047FF; }
   @media only screen and (max-width: 620px) {
     .pad { padding-left: 22px !important; padding-right: 22px !important; }
     .h1 { font-size: 26px !important; line-height: 32px !important; }
@@ -62,17 +62,39 @@ const HTML = `<!DOCTYPE html>
     .btn-a { display: block !important; padding-left: 12px !important; padding-right: 12px !important; }
     .outer-pad { padding: 18px 10px !important; }
   }
+  /* darkproof */
+  :root { color-scheme: light only; supported-color-schemes: light only; }
+  @media (prefers-color-scheme: dark) {
+  .bgc-0047ff { background-color: #0047ff !important; background-image: linear-gradient(#0047ff,#0047ff) !important; }
+  .bgc-ffffff { background-color: #ffffff !important; background-image: linear-gradient(#ffffff,#ffffff) !important; }
+  .bgc-00f1ff { background-color: #00f1ff !important; background-image: linear-gradient(#00f1ff,#00f1ff) !important; }
+  .bgc-eef3ff { background-color: #eef3ff !important; background-image: linear-gradient(#eef3ff,#eef3ff) !important; }
+  .c-0047ff { color: #0047ff !important; }
+  .c-0d1830 { color: #0d1830 !important; }
+  .c-ffffff { color: #ffffff !important; }
+  .c-46536f { color: #46536f !important; }
+  .bd-0047ff { border-color: #0047ff !important; }
+  }
+  [data-ogsb] .bgc-0047ff { background-color: #0047ff !important; background-image: linear-gradient(#0047ff,#0047ff) !important; }
+  [data-ogsb] .bgc-ffffff { background-color: #ffffff !important; background-image: linear-gradient(#ffffff,#ffffff) !important; }
+  [data-ogsb] .bgc-00f1ff { background-color: #00f1ff !important; background-image: linear-gradient(#00f1ff,#00f1ff) !important; }
+  [data-ogsb] .bgc-eef3ff { background-color: #eef3ff !important; background-image: linear-gradient(#eef3ff,#eef3ff) !important; }
+  [data-ogsc] .c-0047ff { color: #0047ff !important; }
+  [data-ogsc] .c-0d1830 { color: #0d1830 !important; }
+  [data-ogsc] .c-ffffff { color: #ffffff !important; }
+  [data-ogsc] .c-46536f { color: #46536f !important; }
+  [data-ogsc] .bd-0047ff { border-color: #0047ff !important; }
 </style>
 </head>
-<body style="margin:0; padding:0; background-color:#0051FD;">
+<body style="margin:0; padding:0; background-color:#0047FF; background-image:linear-gradient(#0047FF,#0047FF);" class="bgc-0047ff">
 
 <!-- preheader: the grey preview line in the inbox -->
-<div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#0051FD;">
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#0047FF;" class="c-0047ff">
   Thanks for visiting Renfluence at Web Summit Lisbon.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;
 </div>
 
 <!-- Background: solid brand blue (bgcolor) always shows. The pattern is an extra that Gmail and Apple Mail draw, Outlook desktop skips. -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0051FD" background="https://georgedakoul.github.io/ws-kiosk/email-pattern.png" style="background-color:#0051FD; background-image:url('https://georgedakoul.github.io/ws-kiosk/email-pattern.png'); background-repeat:repeat;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0047FF" background="https://georgedakoul.github.io/ws-kiosk/email-pattern.png" style="background-color:#0047FF; background-image:url('https://georgedakoul.github.io/ws-kiosk/email-pattern.png'),linear-gradient(#0047FF,#0047FF); background-repeat:repeat;" class="bgc-0047ff">
   <tr>
     <td align="center" class="outer-pad" style="padding:32px 16px;">
       <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
@@ -81,33 +103,33 @@ const HTML = `<!DOCTYPE html>
         <!-- header: white logo on the blue background -->
         <tr>
           <td align="left" class="pad" style="padding:4px 8px 22px 8px;">
-            <img src="https://georgedakoul.github.io/ws-kiosk/logo-white.png" width="160" height="43" alt="Renfluence" style="display:block; width:160px; height:auto; font-family:Arial, Helvetica, sans-serif; font-size:22px; font-weight:bold; color:#FFFFFF;">
+            <a href="https://www.renfluence.ai/en/?utm_source=email&amp;utm_medium=thankyou&amp;utm_campaign=websummit" target="_blank" style="text-decoration:none;"><img src="https://georgedakoul.github.io/ws-kiosk/logo-white.png" width="160" height="43" alt="Renfluence" style="display:block; width:160px; height:auto; font-family:Arial, Helvetica, sans-serif; font-size:22px; font-weight:bold; color:#FFFFFF;"></a>
           </td>
         </tr>
 
         <!-- card -->
         <tr>
-          <td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border-radius:16px;">
+          <td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border-radius:16px; background-image:linear-gradient(#FFFFFF,#FFFFFF);" class="bgc-ffffff">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 
               <!-- accent bar -->
-              <tr><td height="6" bgcolor="#00F1FF" style="height:6px; line-height:6px; font-size:0; background-color:#00F1FF; border-radius:16px 16px 0 0;">&nbsp;</td></tr>
+              <tr><td height="6" bgcolor="#00F1FF" style="height:6px; line-height:6px; font-size:0; background-color:#00F1FF; border-radius:16px 16px 0 0; background-image:linear-gradient(#00F1FF,#00F1FF);" class="bgc-00f1ff">&nbsp;</td></tr>
 
               <!-- eyebrow + greeting -->
               <tr>
-                <td class="pad" style="padding:36px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:13px; line-height:18px; font-weight:bold; letter-spacing:1.2px; text-transform:uppercase; color:#0051FD;">
+                <td class="pad c-0047ff" style="padding:36px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:13px; line-height:18px; font-weight:bold; letter-spacing:1.2px; text-transform:uppercase; color:#0047FF;">
                   Web Summit Lisbon &middot; 10 to 12 Nov
                 </td>
               </tr>
               <tr>
-                <td class="pad h1" style="padding:10px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:32px; line-height:38px; font-weight:bold; letter-spacing:-0.5px; color:#0D1830;">
+                <td class="pad h1 c-0d1830" style="padding:10px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:32px; line-height:38px; font-weight:bold; letter-spacing:-0.5px; color:#0D1830;">
                   Hi {{first_name}}, thanks for stopping by.
                 </td>
               </tr>
 
               <!-- human intro -->
               <tr>
-                <td class="pad" style="padding:18px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; line-height:25px; color:#0D1830;">
+                <td class="pad c-0d1830" style="padding:18px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; line-height:25px; color:#0D1830;">
                   It was good to meet you at our booth (Pavilion 1, A2-69) at Web Summit Lisbon. If you want to continue the conversation, just reply to this email, it goes straight to our team.
                 </td>
               </tr>
@@ -118,12 +140,12 @@ const HTML = `<!DOCTYPE html>
                 <td class="pad" align="left" style="padding:28px 40px 0 40px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                     <tr>
-                      <td class="btn-td" align="center" bgcolor="#0051FD" style="border-radius:12px; background-color:#0051FD;">
+                      <td class="btn-td bgc-0047ff" align="center" bgcolor="#0047FF" style="border-radius:12px; background-color:#0047FF; background-image:linear-gradient(#0047FF,#0047FF);">
                         <!--[if mso]>
-                        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="https://www.renfluence.com" style="height:54px; v-text-anchor:middle; width:520px;" arcsize="22%" stroke="f" fillcolor="#0051FD"><w:anchorlock xmlns:w="urn:schemas-microsoft-com:office:word"/><center style="color:#FFFFFF; font-family:Arial, sans-serif; font-size:17px; font-weight:bold;">Visit renfluence.com</center></v:roundrect>
+                        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="https://www.renfluence.ai/en/?utm_source=email&amp;utm_medium=thankyou&amp;utm_campaign=websummit" style="height:54px; v-text-anchor:middle; width:520px;" arcsize="22%" stroke="f" fillcolor="#0047FF"><w:anchorlock xmlns:w="urn:schemas-microsoft-com:office:word"/><center style="color:#FFFFFF; font-family:Arial, sans-serif; font-size:17px; font-weight:bold;">Visit renfluence.com</center></v:roundrect>
                         <![endif]-->
                         <!--[if !mso]><!-->
-                        <a class="btn-a" href="https://www.renfluence.com" target="_blank" style="display:inline-block; padding:16px 32px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:17px; line-height:22px; font-weight:bold; color:#FFFFFF; text-decoration:none; border-radius:12px; background-color:#0051FD;">Visit renfluence.com</a>
+                        <a class="btn-a bgc-0047ff c-ffffff" href="https://www.renfluence.ai/en/?utm_source=email&amp;utm_medium=thankyou&amp;utm_campaign=websummit" target="_blank" style="display:inline-block; padding:16px 32px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:17px; line-height:22px; font-weight:bold; color:#FFFFFF; text-decoration:none; border-radius:12px; background-color:#0047FF; background-image:linear-gradient(#0047FF,#0047FF);">Visit renfluence.com</a>
                         <!--<![endif]-->
                       </td>
                     </tr>
@@ -136,7 +158,7 @@ const HTML = `<!DOCTYPE html>
                 <td class="pad" style="padding:24px 40px 0 40px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
                     <tr>
-                      <td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:2px solid #0051FD; border-radius:10px; padding:14px 18px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; line-height:23px; font-weight:bold; color:#0D1830;">
+                      <td bgcolor="#FFFFFF" style="background-color:#FFFFFF; border:2px solid #0047FF; border-radius:10px; padding:14px 18px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; line-height:23px; font-weight:bold; color:#0D1830; background-image:linear-gradient(#FFFFFF,#FFFFFF);" class="bgc-ffffff c-0d1830 bd-0047ff">
                         {{voucher_line}}
                       </td>
                     </tr>
@@ -150,8 +172,8 @@ const HTML = `<!DOCTYPE html>
                 <td class="pad" style="padding:32px 40px 0 40px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                     <tr>
-                      <td bgcolor="#EEF3FF" style="background-color:#EEF3FF; border-left:4px solid #0051FD; border-radius:10px; padding:18px 20px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; line-height:23px; color:#0D1830;">
-                        <strong style="color:#0051FD; font-size:12px; letter-spacing:1.2px; text-transform:uppercase;">What we do</strong><br>
+                      <td bgcolor="#EEF3FF" style="background-color:#EEF3FF; border-left:4px solid #0047FF; border-radius:10px; padding:18px 20px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:15px; line-height:23px; color:#0D1830; background-image:linear-gradient(#EEF3FF,#EEF3FF);" class="bgc-eef3ff c-0d1830 bd-0047ff">
+                        <strong style="color:#0047FF; font-size:12px; letter-spacing:1.2px; text-transform:uppercase;" class="c-0047ff">What we do</strong><br>
                         Renfluence finds the right creators for brands by looking inside their videos.<br>
                         Edge is our analytics product.
                       </td>
@@ -162,14 +184,14 @@ const HTML = `<!DOCTYPE html>
 
               <!-- sign-off -->
               <tr>
-                <td class="pad" style="padding:30px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; line-height:25px; color:#0D1830;">
+                <td class="pad c-0d1830" style="padding:30px 40px 0 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; line-height:25px; color:#0D1830;">
                   Thanks again,
                 </td>
               </tr>
               <tr>
-                <td class="pad" style="padding:6px 40px 40px 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; line-height:22px; color:#0D1830;">
+                <td class="pad c-0d1830" style="padding:6px 40px 40px 40px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:16px; line-height:22px; color:#0D1830;">
                   <strong>The Renfluence team</strong><br>
-                  <span style="color:#46536F; font-size:14px;">renfluence.com</span>
+                  <a href="https://www.renfluence.ai/en/?utm_source=email&amp;utm_medium=thankyou&amp;utm_campaign=websummit" target="_blank" style="color:#46536F; font-size:14px; text-decoration:underline;" class="c-46536f">renfluence.com</a>
                 </td>
               </tr>
 
@@ -179,7 +201,7 @@ const HTML = `<!DOCTYPE html>
 
         <!-- footer, on the blue background -->
         <tr>
-          <td class="pad" align="left" style="padding:22px 8px 0 8px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:13px; line-height:20px; color:#FFFFFF;">
+          <td class="pad c-ffffff" align="left" style="padding:22px 8px 0 8px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:13px; line-height:20px; color:#FFFFFF;">
             If this is not for you, reply &lsquo;no&rsquo; and we will not write again.<br>
             Renfluence &middot; info@renfluence.com{{postal_address}}
           </td>

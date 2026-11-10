@@ -105,7 +105,7 @@ ok('plan: a real lead gets From, Reply-To, subject, first name and unsubscribe w
     assert.match(body, /Hi Ana,/);
     assert.match(body, /reply (&lsquo;|')no(&rsquo;|') and we will not write again/);
     assert.match(body, /info@renfluence\.com/);
-    assert.ok(!/\{\{|\}\}|voucher_line|WEBSUMMIT|50%|code /i.test(body), 'placeholder or invented offer left');
+    assert.ok(!/\{\{|\}\}|voucher_line|WEBSUMMIT26|50%|code /i.test(body), 'placeholder or invented offer left');
   }
   assert.ok(p.html.startsWith('<!DOCTYPE html>'));
   assert.ok(!/\n\n\n\n/.test(p.text), 'no big gap where the offer would be');
