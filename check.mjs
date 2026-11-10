@@ -1,7 +1,7 @@
 // End-to-end check in headless Chrome: every screen on common tablet and phone sizes in both orientations
 // (screenshots plus a layout audit), the Q7 and thank-you rules, the thank-you reset (no idle reset), the lead archive
 // and CSV export, private-mode storage, the offline queue, the wording Sheet (stubbed CSV: edited label, unchanged post, cache,
-// blank cell, error page), Q4's "Other in Europe" and "Elsewhere" lists and the optional «Something else» text on Q1 and Q2.
+// blank cell, error page), Q4's "Other in Europe" and "Elsewhere" lists, the optional «Something else» text on Q1 and Q2 and the optional «Who did you speak with» on the details screen.
 // Usage: node check.mjs [page-url] [screenshot-dir]
 // By default formResponse is intercepted and answered locally. LIVE=1 lets the offline-queue submission
 // (name "TEST Koulouris kiosk offline", tablet "TEST") through to the real Google Form: one row in the Sheet,
@@ -104,7 +104,7 @@ async function snap(tag, name) {
 }
 
 // One whole visit through the kiosk, ending on the thank-you screen.
-async function lead({ name = 'Check Person', company = 'Check Co', email = 'check.person@example.com', phone = '', platform = false, agency = 'Agency', typeText = '', roleText = '' } = {}) {
+async function lead({ name = 'Check Person', company = 'Check Co', email = 'check.person@example.com', phone = '', platform = false, agency = 'Agency', typeText = '', roleText = '', who = '' } = {}) {
   await click('#start');
   await tap(typeText ? 'Something else' : agency);
   if (typeText) { await fill('#q-text', typeText); await input('#q-text'); }
@@ -122,6 +122,7 @@ async function lead({ name = 'Check Person', company = 'Check Co', email = 'chec
   await tap('4 to 10'); await sleep(400);
   await tap('In the next'); await sleep(400);
   await fill('#f-name', name); await fill('#f-company', company); await fill('#f-email', email); await fill('#f-phone', phone);
+  if (who) await click(`#f-who [data-w="${who}"]`);
   await js(`document.querySelector('#f-consent').checked = true`);
   await click('#details button[type=submit]');
 }
@@ -271,6 +272,7 @@ try {
     await snap(tag, `${tag}-12-details-errors`);
     await fill('#f-name', 'Inês Carvalho'); await fill('#f-company', 'Lisboa Câmara Comunicação');
     await fill('#f-email', 'ines.carvalho@example.pt'); await fill('#f-phone', '+351 912 847 193');
+    await click('#f-who [data-w="Panagiotis"]'); // the selected state goes through the layout audit too
     await js(`document.querySelector('#f-consent').checked = true`); await js(`document.querySelectorAll('.bad').forEach(e => e.classList.remove('bad'))`);
     await js(`document.querySelectorAll('.err').forEach(e => e.textContent = '')`);
     await snap(tag, `${tag}-13-details-filled`);
@@ -344,7 +346,7 @@ try {
   console.log('q4 other in europe: ok');
 
   // One visit with the open-ended answers set by `opts`; returns the archived record.
-  async function visit(name, { q1 = 'Agency', q1text, q2 = 'Director', q2text, q4 = [], q4text = {}, q5 = ['Finding'] }) {
+  async function visit(name, { q1 = 'Agency', q1text, q2 = 'Director', q2text, q4 = [], q4text = {}, q5 = ['Finding'], who = [] }) {
     await go(PAGE);
     await click('#start');
     await tap(q1); if (q1text) { await fill('#q-text', q1text); await input('#q-text'); }
@@ -356,8 +358,10 @@ try {
     await click('#next'); for (const h of q5) await tap(h); await click('#next'); await tap('Our own tool'); await sleep(400);
     await tap('4 to 10'); await sleep(400); await tap('In the next'); await sleep(400);
     await fill('#f-name', name); await fill('#f-company', 'Check Co'); await fill('#f-email', 'open.ended@example.com');
+    for (const w of who) await click(`#f-who [data-w="${w}"]`); // each tap in order: another name replaces the first, the same one deselects
     await js(`document.querySelector('#f-consent').checked = true`);
     await click('#details button[type=submit]');
+    assert.equal(await visible(), 'thanks', 'Send works with or without a name');
     const r = (await archive()).at(-1);
     return { r, b: new URLSearchParams(r.body) };
   }
@@ -387,6 +391,32 @@ try {
   assert.deepEqual([v.r.answers['Q1 other text'], v.r.answers['Q2 other text']], ['', ''], 'the field is optional, nobody is blocked');
   assert.deepEqual([v.b.getAll('entry.415824857'), v.b.getAll('entry.1228148969')], [[], []], 'an empty field posts nothing');
   console.log('something else: ok (typed text posts to its own Form questions)');
+
+  // «Who did you speak with»: optional single choice after the email field, posted to its own last Form question.
+  const WHO_ENTRY = 'entry.1189592180';
+  v = await visit('Who Untouched', {});
+  assert.deepEqual(v.b.getAll(WHO_ENTRY), [], 'untouched posts nothing');
+  assert.equal(v.r.answers['Spoke with'], '');
+  v = await visit('Who Theo', { who: ['Theo'] });
+  assert.deepEqual(v.b.getAll(WHO_ENTRY), ['Theo'], 'the chosen name posts');
+  assert.equal(v.r.answers['Spoke with'], 'Theo');
+  assert.equal(v.b.get('pageHistory'), '0,1,2,3,4,5,6,8,9,10', 'the sections are unchanged');
+  await click('#next-visitor');
+  assert.deepEqual(await js(`({ pressed: document.querySelectorAll('#f-who [aria-pressed="true"]').length, who: String(answers.who) })`), { pressed: 0, who: 'undefined' }, 'the next visitor starts with no name chosen');
+  v = await visit('Who Switch', { who: ['Petros', 'Karavokyris'] });
+  assert.deepEqual(v.b.getAll(WHO_ENTRY), ['Karavokyris'], 'single choice: another name replaces the first');
+  v = await visit('Who Deselect', { who: ['Giorgos', 'Giorgos'] });
+  assert.deepEqual(v.b.getAll(WHO_ENTRY), [], 'tap again deselects, nothing posts');
+  assert.equal(v.r.answers['Spoke with'], '');
+  // It sits right after the email field, offers exactly the five names, and every string is a data-t key.
+  await go(PAGE); await click('#start'); await js(`show('details')`);
+  assert.deepEqual(await js(`({ after: !!(document.getElementById('f-email').compareDocumentPosition(document.getElementById('f-who')) & Node.DOCUMENT_POSITION_FOLLOWING),
+    next: document.getElementById('f-email').closest('.field').nextElementSibling.classList.contains('who-field'),
+    names: [...document.querySelectorAll('#f-who .opt')].map((b) => b.dataset.w + '=' + b.textContent), keys: [...document.querySelectorAll('#who-label [data-t], #f-who [data-t]')].map((e) => e.dataset.t) })`),
+    { after: true, next: true, names: ['Petros=Petros', 'Panagiotis=Panagiotis', 'Giorgos=Giorgos', 'Karavokyris=Karavokyris', 'Theo=Theo'],
+      keys: ['who', 'optional', 'who.petros', 'who.panagiotis', 'who.giorgos', 'who.karavokyris', 'who.theo'] });
+  assert.equal(await js(`t('who')`), 'Who did you speak with at our booth?');
+  console.log('who: ok (after email, optional, single choice, deselect, posts to its own entry)');
 
   // Petros's doc (Lisbon kiosk: qualification questionnaire). The posted values are the live Google Form's option texts, so Q2 and Q5's
   // first option keep the Form's wording here, and the doc's casing and «content mix» wording come from the Kiosk κείμενα Sheet.
@@ -567,7 +597,7 @@ try {
   assert.deepEqual(rows[0], ['Timestamp', 'Which best describes you?', 'What is your role?', 'Who would you use it for?', 'Which markets do you work in?',
     'What would help you most?', 'How do you handle this today?', 'Which platform?', 'How many clients do you run social or creator work for?',
     'How many campaigns or topics do you follow in a year?', 'How many creator or social campaigns do you run in a year?',
-    'When would this be useful to you?', 'Full name', 'Company', 'Work email', 'Phone', 'Consent', 'Tablet', 'Other markets', 'Q1 other text', 'Q2 other text', 'Sent']);
+    'When would this be useful to you?', 'Full name', 'Company', 'Work email', 'Phone', 'Consent', 'Tablet', 'Other markets', 'Q1 other text', 'Q2 other text', 'Spoke with', 'Sent']);
   const col = (n) => rows[0].indexOf(n), last = rows.at(-1);
   assert.match(rows[1][0], ATHENS_ISO);
   assert.equal(rows[1][col('Full name')], 'Inês Carvalho');
@@ -578,6 +608,8 @@ try {
   const ot = rows.find((r) => r[col('Full name')] === 'Other Text');
   assert.deepEqual([ot[col('Q1 other text')], ot[col('Q2 other text')]], ['Podcaster, "live"', 'Chief vibes officer'], 'the CSV carries the typed text');
   assert.equal(rows.find((r) => r[col('Full name')] === 'Elsewhere Both')[col('Other markets')], 'Spain, Moldova, Africa, Kenya');
+  assert.equal(rows.find((r) => r[col('Full name')] === 'Who Theo')[col('Spoke with')], 'Theo', 'the CSV carries who they spoke with');
+  assert.equal(rows.find((r) => r[col('Full name')] === 'Who Untouched')[col('Spoke with')], '', 'and leaves it empty when untouched');
   assert.equal(rows[1][col('Tablet')], '', 'leads taken before the name was set have no tablet');
   assert.match(last[col('Sent')], ATHENS_ISO);
   assert.ok(raw.toString('utf8').split('\r\n')[1].startsWith('"'), 'fields are quoted');
@@ -620,7 +652,7 @@ try {
   offline = true;
   await page('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await sleep(300);
-  await lead({ name: 'TEST Koulouris kiosk offline', company: 'TEST', email: 'test.kiosk@example.com', platform: true, typeText: 'TEST q1 other', roleText: 'TEST q2 other' });
+  await lead({ name: 'TEST Koulouris kiosk offline', company: 'TEST', email: 'test.kiosk@example.com', platform: true, typeText: 'TEST q1 other', roleText: 'TEST q2 other', who: 'Theo' });
   await sleep(1500);
   const whileOffline = await js(`({ queued: queue().length, dot: document.getElementById('dot').className, count: document.getElementById('dot').textContent, screen })`);
   assert.deepEqual(whileOffline, { queued: 1, dot: 'queued', count: '1', screen: 'thanks' });
@@ -634,6 +666,8 @@ try {
   assert.equal(body.get('pageHistory'), '0,1,2,3,4,5,6,7,8,9,10');
   assert.equal(body.get('entry.938892717'), LIVE ? 'TEST' : null);
   assert.deepEqual([body.get('entry.415824857'), body.get('entry.1228148969')], ['TEST q1 other', 'TEST q2 other']);
+  assert.equal(body.get('entry.1189592180'), 'Theo', 'who they spoke with survives the offline queue');
+  assert.equal((await archive())[0].answers['Spoke with'], 'Theo');
   await shot('offline-queued-dot');
   offline = false;
   await page('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });

@@ -125,8 +125,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .nav .btn-primary { min-width: 10rem; }
 
 .field { display: flex; flex-direction: column; gap: 0.4rem; }
-.field label { font-size: 0.9rem; font-weight: 650; }
-.field label .hint { font-weight: 400; color: var(--muted); }
+.field label, .field .lbl { font-size: 0.9rem; font-weight: 650; }
+.field .hint { font-weight: 400; color: var(--muted); }
 .field input[type=text], .field input[type=email], .field input[type=tel] {
   width: 100%; min-width: 0; height: 3.2rem; border-radius: var(--r); border: 2px solid var(--line); background: var(--white);
   padding: 0 0.9rem; font: inherit; font-size: 1.1rem; color: var(--ink); outline: none;
@@ -134,7 +134,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .field input:focus { border-color: var(--blue); }
 .field.bad input { border-color: var(--red); }
 .err { font-size: 0.8rem; color: var(--red); min-height: 1.3em; }
-.fields { align-content: start; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.2rem; }
+.fields { align-content: start; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.2rem; grid-auto-flow: row dense; }
+.who-field { grid-column: 1 / -1; }
+.who-field .options.compact { grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); } /* 3 across (then 2) on a tablet: Karavokyris needs 9.5rem */
 .consent { grid-column: 1 / -1; display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.8rem 0.9rem; border-radius: var(--r); background: var(--white); border: 2px solid var(--line); font-size: 0.95rem; }
 .consent input { width: 1.5rem; height: 1.5rem; flex: none; accent-color: var(--blue); margin-top: 0; }
 .consent.bad { border-color: var(--red); }
@@ -263,6 +265,7 @@ Lisbon 2026</p><span id="device"></span></div>
       <div class="field"><label for="f-name" data-t="details.name">Full name</label><input id="f-name" name="name" type="text" autocomplete="off" autocapitalize="words"><span class="err"></span></div>
       <div class="field"><label for="f-company" data-t="details.company">Company</label><input id="f-company" name="company" type="text" autocomplete="off"><span class="err"></span></div>
       <div class="field"><label for="f-email" data-t="details.email">Work email</label><input id="f-email" name="email" type="email" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="err"></span></div>
+      <div class="field who-field"><span class="lbl" id="who-label"><span data-t="who">Who did you speak with at our booth?</span> <span class="hint" data-t="optional">(optional)</span></span><div class="options compact" id="f-who" role="group" aria-labelledby="who-label"><button class="opt" type="button" data-w="Petros" aria-pressed="false"><span class="main" data-t="who.petros">Petros</span></button><button class="opt" type="button" data-w="Panagiotis" aria-pressed="false"><span class="main" data-t="who.panagiotis">Panagiotis</span></button><button class="opt" type="button" data-w="Giorgos" aria-pressed="false"><span class="main" data-t="who.giorgos">Giorgos</span></button><button class="opt" type="button" data-w="Karavokyris" aria-pressed="false"><span class="main" data-t="who.karavokyris">Karavokyris</span></button><button class="opt" type="button" data-w="Theo" aria-pressed="false"><span class="main" data-t="who.theo">Theo</span></button></div></div>
       <div class="field"><label for="f-phone"><span data-t="details.phone">Phone</span> <span class="hint" data-t="optional">(optional)</span></label><input id="f-phone" name="phone" type="tel" autocomplete="off"><span class="err"></span></div>
       <label class="consent" id="consent-box"><input id="f-consent" name="consent" type="checkbox"><span data-t="details.consent">I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.</span></label>
     </div>
@@ -361,6 +364,8 @@ const VOLUME_QUESTIONS = {
 const DETAILS = { name: '810863017', company: '762619381', email: '1364327607', phone: '704510133', consent: '197921277' };
 // Short-answer question «Tablet» in the form's details section: the kiosk posts it, visitors never see it.
 const DEVICE_ENTRY = '938892717';
+// Short-answer question «Spoke with», last in the Form (details section). Optional: the posted value is the button's fixed name (data-w), never the editable wording.
+const WHO = { entry: '1189592180', column: 'Spoke with' };
 
 // Sheet column order: Q1 to Q6, the inline platform, the three Q7 wordings, Q8, then the details.
 const COLUMNS = [
@@ -372,6 +377,7 @@ const COLUMNS = [
   { label: QUESTIONS.find((q) => q.more).more.column, entry: QUESTIONS.find((q) => q.more).more.entry },
   // An `ask` with a `column` is a separate Form question at the end; one without (the platform) sits inline after its question.
   ...QUESTIONS.filter((q) => q.ask && q.ask.column).map((q) => ({ label: q.ask.column, entry: q.ask.entry })),
+  { label: WHO.column, entry: WHO.entry },
 ];
 
 const $ = (s) => document.querySelector(s);
@@ -419,6 +425,7 @@ for (const ev of ['visibilitychange', 'pageshow', 'focus']) addEventListener(ev,
 function reset() {
   answers = {}; step = 0;
   $('#details').reset();
+  paintWho();
   document.querySelectorAll('.bad').forEach((el) => el.classList.remove('bad'));
   document.querySelectorAll('.err').forEach((el) => (el.textContent = ''));
   document.activeElement?.blur();
@@ -528,6 +535,14 @@ function back() {
   step--; renderQuestion();
 }
 
+// «Who did you speak with»: one name or none, tap again to deselect. Optional, never blocks Send.
+function paintWho() { document.querySelectorAll('#f-who .opt').forEach((b) => b.setAttribute('aria-pressed', b.dataset.w === answers.who)); }
+$('#f-who').onclick = (e) => {
+  const b = e.target.closest('.opt');
+  if (!b) return;
+  answers.who = answers.who === b.dataset.w ? undefined : b.dataset.w;
+  paintWho();
+};
 $('#next-visitor').onclick = reset;
 $('#start').onclick = () => { step = 0; renderQuestion(); show('question'); };
 $('#next').onclick = next;
@@ -577,6 +592,7 @@ function payload(a, d) {
   for (const k of ['name', 'company', 'email', 'phone']) if (d[k]) p.append('entry.' + DETAILS[k], d[k]);
   p.append('entry.' + DETAILS.consent, CONSENT);
   if (device()) p.append('entry.' + DEVICE_ENTRY, device());
+  if (a.who) p.append('entry.' + WHO.entry, a.who);
   // Sections: 0 intro, 1-6 Q1-Q6, 7 "Which platform?" (inline on Q6 here, still posted), 8 Q7, 9 Q8, 10 details.
   p.append('pageHistory', a.today === 'Another platform' ? '0,1,2,3,4,5,6,7,8,9,10' : '0,1,2,3,4,5,6,8,9,10');
   p.append('fvv', '1');
