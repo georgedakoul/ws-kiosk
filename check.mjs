@@ -1,5 +1,5 @@
 // End-to-end check in headless Chrome: every screen on common tablet and phone sizes in both orientations
-// (screenshots plus a layout audit), the Q7 and thank-you rules, the idle and thank-you resets, the lead archive
+// (screenshots plus a layout audit), the Q7 and thank-you rules, the thank-you reset (no idle reset), the lead archive
 // and CSV export, private-mode storage, the offline queue, the wording Sheet (stubbed CSV: edited label, unchanged post, cache,
 // blank cell, error page), Q4's "Other in Europe" and "Elsewhere" lists and the optional «Something else» text on Q1 and Q2.
 // Usage: node check.mjs [page-url] [screenshot-dir]
@@ -479,19 +479,19 @@ try {
   await go(PAGE);
   console.log('texts: new text only on welcome, offline uses cache, error page and blank cell fall back');
 
-  // Idle reset: answers and inputs are cleared after the (shortened) idle timer.
-  await go(PAGE + '?idle=2&thanks=2');
+  // No idle reset: answers and inputs survive well past the old 90 s (clock jumped forward, then the tick runs).
+  await go(PAGE);
   await click('#start'); await tap('Agency');
-  await sleep(2600);
-  assert.equal(await visible(), 'welcome');
-  await click('#start');
-  assert.equal(await js(`document.querySelectorAll('.opt[aria-pressed=true]').length`), 0);
+  await js(`Date.now = ((n) => () => n() + 200000)(Date.now)`);
+  await sleep(1000);
+  assert.equal(await visible(), 'question');
+  assert.equal(await js(`document.querySelectorAll('.opt[aria-pressed=true]').length`), 1);
   await js(`answers = { type: ['Agency (creative, social, media or influencer)'] }; show('details')`);
   await fill('#f-name', 'Idle Person'); await js(`document.querySelector('#f-consent').checked = true`);
-  await sleep(2600);
-  assert.equal(await visible(), 'welcome');
-  assert.deepEqual(await js(`[document.querySelector('#f-name').value, document.querySelector('#f-consent').checked, JSON.stringify(answers)]`), ['', false, '{}']);
-  console.log('idle reset: ok');
+  await sleep(1000);
+  assert.equal(await visible(), 'details');
+  assert.deepEqual(await js(`[document.querySelector('#f-name').value, document.querySelector('#f-consent').checked]`), ['Idle Person', true]);
+  console.log('no idle reset: ok');
 
   // Thank-you screen. The lead is queued and archived before it shows, so a reload there loses nothing.
   // The network is down for this part, so the queue cannot drain on its own.

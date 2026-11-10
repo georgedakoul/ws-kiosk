@@ -297,8 +297,7 @@ Lisbon 2026</p><span id="device"></span></div>
 // Posts to the public Google Form "Web Summit 2026 kiosk form". The Sheet behind it scores and routes.
 const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScx6NdDuICiac0nrjsDN2XPvW4OUvNpEnW6bKqJBbIdFcmE5A/formResponse';
 const params = new URLSearchParams(location.search);
-// ?idle=5&thanks=3 shortens the timers (seconds) for testing.
-const IDLE_MS = (+params.get('idle') || 90) * 1000;
+// ?thanks=3 shortens the thank-you timer (seconds) for testing. There is no idle timeout: a visitor's answers stay until they submit.
 const THANKS_MS = (+params.get('thanks') || 25) * 1000;
 const RETRY_MS = 30000, SEND_TIMEOUT_MS = 20000, QUEUE_KEY = 'ws-kiosk-queue', ARCHIVE_KEY = 'ws-kiosk-archive', DEVICE_KEY = 'ws-kiosk-device';
 const CONSENT = "I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.";
@@ -407,10 +406,11 @@ function show(name) {
   arm();
 }
 
-// The reset is a deadline checked four times a second, not one setTimeout: a tablet that throttles or freezes timers
-// (screen off, battery saver) still goes back to the start the moment it wakes.
+// Only the thank-you screen resets by itself (the lead is already saved). It is a deadline checked four times a second,
+// not one setTimeout: a tablet that throttles or freezes timers (screen off, battery saver) still goes back to the start
+// the moment it wakes.
 function arm() {
-  deadline = screen === 'welcome' || screen === 'export' ? 0 : Date.now() + (screen === 'thanks' ? THANKS_MS : IDLE_MS);
+  deadline = screen === 'thanks' ? Date.now() + THANKS_MS : 0;
 }
 function tick() { if (deadline && Date.now() >= deadline) reset(); }
 setInterval(tick, 250);
@@ -762,7 +762,6 @@ if (params.has('export')) {
 addEventListener('online', flush);
 addEventListener('offline', dot);
 if (!params.has('export')) setInterval(flush, RETRY_MS); // the kiosk tab does the sending, never both tabs
-for (const ev of ['pointerdown', 'keydown', 'input']) addEventListener(ev, () => { if (screen !== 'thanks') arm(); }, { capture: true, passive: true });
 addEventListener('contextmenu', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
 dot();
 if (!params.has('export')) flush();

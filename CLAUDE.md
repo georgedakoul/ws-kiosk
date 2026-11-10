@@ -43,6 +43,7 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   and posted as the Form question «Tablet» (`entry.938892717`, short answer, not required, never shown to visitors).
 - `navigator.storage.persist()` is requested. If `localStorage` fails, a red banner shows on the welcome screen
   and leads stay in memory for that page.
+- There is no idle timeout: a visitor's answers stay on screen until they submit or tap Back, however long the tablet sits (an idle reset lost answers). Only the thank-you screen returns to the welcome screen by itself, after 25 s (`?thanks=N` shortens it), because its lead is already archived.
 - The reset after the thank-you is a deadline checked four times a second (and on visibility, focus, pageshow),
   so a throttled tablet still resets. **Next visitor** resets at once.
 - `sheet-owner.gs` is the Apps Script bound to the Sheet (copy of what runs there). `install()` creates the
@@ -65,8 +66,7 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
 
 `node check.mjs [url] [screenshot-dir]` runs headless Chrome: every screen at 8 sizes in both orientations
 (1180x820, 1133x744, 1280x800, 1024x768, 1366x1024, 390x844, 360x640, 1280x600) with a layout audit and
-screenshots in `~/.local/state/pi-subagents/ws-kiosk-check/`, the Q7 and thank-you rules, the idle and
-thank-you resets, the archive and CSV export, private-mode storage, the wording Sheet with a stubbed CSV (edited label shown,
+screenshots in `~/.local/state/pi-subagents/ws-kiosk-check/`, the Q7 and thank-you rules, the thank-you reset (there is no idle reset), the archive and CSV export, private-mode storage, the wording Sheet with a stubbed CSV (edited label shown,
 posted body unchanged, cache offline, blank cell falls back, error page ignored), Q4's extra countries, and the offline queue
 with `formResponse` intercepted. `ONLY=1280x800` limits the sizes. `LIVE=1` sends the offline-queue lead (name «TEST Koulouris
 kiosk offline», tablet «TEST») to the real form (Q1 and Q2 «Something else» with the texts «TEST q1 other» and «TEST q2 other»), so delete that Sheet row after.
@@ -75,7 +75,7 @@ kiosk offline», tablet «TEST») to the real form (Q1 and Q2 «Something else»
 Healthy `check.mjs` output ends with:
 
 ```
-idle reset: ok
+no idle reset: ok
 offline queue: ok, posts = 1 (intercepted)
 PASS
 ```
