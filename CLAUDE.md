@@ -48,7 +48,7 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
 - `sheet-owner.gs` is the Apps Script bound to the Sheet (copy of what runs there). `install()` creates the
   `onFormSubmit` trigger: it sets Owner from Routed owner when empty and emails that owner. Names starting with
   `TEST` get an Owner but no owner email.
-- `thank-you.gs` is the **second file** of that Apps Script project (paste both; `sheet-owner.gs` alone fails on the missing constants) and can mail
+- The in-project `thank-you.gs` is the old path and stays off; the live mailer is the standalone project in «Thank-you mailer (live)» below. It is the **second file** of that Apps Script project (paste both; `sheet-owner.gs` alone fails on the missing constants) and can mail
   the visitor. Off twice: `SEND_THANK_YOU = false` and no Script Property `EMAIL_PROVIDER_KEY`. From and Reply-To `info@renfluence.com`,
   provider MailerSend (`EMAIL_PROVIDER` property switches to `resend` or `gmail`, the info@ alias fallback). Sends only to «Work email», only when «Consent» is filled, once per
   row (column «Thank-you sent», added at the right of the leads Sheet only while the flag is on; written before the send), 300 a day at most. `TEST` names
@@ -56,6 +56,10 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   the team confirms an offer. The same address is mailed once per 6 hours. With the `gmail` provider set the key property to any text. The core of `thank-you.gs` is identical in ei-kiosk and ws-kiosk (only the brand block and the HTML differ): change both. Editor functions: `dryRun` (logs, sends nothing), `sendTestMail` (one mail to George, needs the key). New scope
   `script.external_request` (and full Gmail access, from the fallback's `GmailApp`): pasting this code needs `install()` run again at once, even with the flag off, or the trigger stops with an authorisation error. The consent line says "contact me about this conversation" and does not name email: George decides on adding "including by email" before switching this on.
 - The layout scales with `rem` from `html { font-size: clamp(...) }`. Option areas scroll inside on short screens, never sideways.
+
+## Thank-you mailer (live)
+
+`mailer-standalone.gs` is a separate Apps Script project owned by info@renfluence.com, and it is live: one 5-minute trigger (`sendPending`) mails the «Work email» of every leads-Sheet row from `FIRST_ROW` (8) down that has «Consent» filled and no «Thank-you sent» marker, from and Reply-To info@renfluence.com. It never mails a row without that consent, and it writes the marker before the send (one try per row, one mail per address per 6 hours). `OFFER_TEXT` is empty until an offer is confirmed. Switch off: run `removeTrigger()` in the editor and set `SEND_THANK_YOU = false`. Flags, text, colours and open points are in `mailer-standalone-README.md`. Check it with `node mailer-check.mjs`.
 
 ## Check
 
