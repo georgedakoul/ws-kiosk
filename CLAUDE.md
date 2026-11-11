@@ -33,7 +33,7 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   X Score, Y Band, Z Routed owner (formulas), AA Owner, AB Status, AC Note, AD Thank-you sent. The Form writes into the same header names, so the mapping
   holds; the formulas read F for the timestamp. **Timestamp is no longer column A**: scripts must find columns by header, never by position (the
   `index.html` `COLUMNS` order, so the archive and CSV, is still the Form's old order with Timestamp first, and does not match the Sheet). The Form
-  writes into the first empty row, so rows added by hand without a timestamp (the name-only rows under the live leads) sit between submissions. Open: `notifyOwners` in `mailer-standalone.gs` still takes column A (`r[0]`) as the timestamp, so after the reorder it counts name-only rows as leads.
+  writes into the first empty row, so rows added by hand without a timestamp (the name-only rows under the live leads) sit between submissions. `notifyOwners` reads the «Timestamp» header (fixed in the repo file; the live Apps Script project still has the old `r[0]` until the file is pasted in), so name-only rows are not leads.
 - Q1 and Q2 «Something else» open an optional text field (`ask`). The Form's «Something else» is a plain option with no free-text
   response, so the typed text posts to two extra optional short-answer Form questions at the end of the details section, «Q1 other text»
   (`entry.415824857`) and «Q2 other text» (`entry.1228148969`). Q1 and Q2 themselves still post only their option. In the leads Sheet
