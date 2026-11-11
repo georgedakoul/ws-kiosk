@@ -163,9 +163,9 @@ ok('no trial length in any mail: no "trial", "15 days" or "30 days" in text or H
 });
 // Owner notification (Renfluence only): the lead mail to Petros and the others, sent from the info@ mailbox, never from George's.
 if (WS) {
-  const NH = ['Full name', 'Company', 'Work email', 'Product', 'Timestamp', 'Which best describes you?', 'Consent', 'Tablet', 'Spoke with', 'Score', 'Band', 'Routed owner', 'Owner', 'Thank-you sent']; // the live Sheet's order since 11 Nov: Timestamp is not column A
-  const lead = (o = {}) => { const d = { ts: 't', type: 'Agency (creative, social, media or influencer)', name: 'Ana Silva', company: 'Hotel Lisboa', email: 'ana@hotel.pt', consent: 'I agree', tablet: 'T1', who: 'Theo', score: 77, band: 'Hot', product: 'Partnership', routed: 'Petros', owner: 'Petros', ty: '', ...o };
-    return [d.name, d.company, d.email, d.product, d.ts, d.type, d.consent, d.tablet, d.who, d.score, d.band, d.routed, d.owner, d.ty]; };
+  const NH = ['Full name', 'Company', 'Work email', 'Phone', 'Product', 'Timestamp', 'Which best describes you?', 'Consent', 'Tablet', 'Spoke with', 'Score', 'Band', 'Routed owner', 'Owner', 'Thank-you sent']; // the live Sheet's order since 11 Nov: Timestamp is not column A
+  const lead = (o = {}) => { const d = { ts: 't', type: 'Agency (creative, social, media or influencer)', name: 'Ana Silva', company: 'Hotel Lisboa', email: 'ana@hotel.pt', phone: '+351 912 345 678', consent: 'I agree', tablet: 'T1', who: 'Theo', score: 77, band: 'Hot', product: 'Partnership', routed: 'Petros', owner: 'Petros', ty: '', ...o };
+    return [d.name, d.company, d.email, d.phone, d.product, d.ts, d.type, d.consent, d.tablet, d.who, d.score, d.band, d.routed, d.owner, d.ty]; };
   const nload = (rows, o = {}) => load({ rows, head: NH, ...o });
   const nmark = (m, i = 0) => m.sheet.g[1 + i][m.sheet.g[0].indexOf('Owner notified')] ?? '';
   ok('notifyOwners: one short mail from the info@ mailbox to the owner, first name only, marker written BEFORE the send, once', () => {
@@ -173,10 +173,14 @@ if (WS) {
     assert.equal(m.calls.sent.length, 1); const x = m.calls.sent[0];
     assert.equal(x.to, 'petros@renfluence.com'); assert.equal(x.subject, 'New Web Summit lead: Ana Hotel Lisboa');
     assert.equal(x.o.name, 'Renfluence'); assert.equal(x.o.replyTo, ME); assert.ok(!('from' in x.o) && !('htmlBody' in x.o), 'plain text, no alias');
-    assert.equal(x.text, ['Name: Ana', 'Company: Hotel Lisboa', 'Business type: Agency (creative, social, media or influencer)', 'Score: 77 (Hot)', 'Product: Partnership', 'Spoke with: Theo', '',
+    assert.equal(x.text, ['Name: Ana Silva', 'Company: Hotel Lisboa', 'Email: ana@hotel.pt', 'Phone: +351 912 345 678', 'Business type: Agency (creative, social, media or influencer)', 'Score: 77 (Hot)', 'Product: Partnership', 'Spoke with: Theo', '',
       'Sheet row: https://docs.google.com/spreadsheets/d/1gL3qWTlDSQkDGJT86B1mW1s3vtEy46-YD_zRfXsbxJE/edit#gid=42&range=A2'].join('\n'));
-    assert.ok(!/Silva|ana@hotel/.test(x.text + x.subject), 'no surname, no email, no phone');
+    assert.ok(!/Silva|ana@hotel|351/.test(x.subject), 'the subject carries the first name and company only, never the surname, email or phone');
     assert.match(x.sheetThen, /sending 20/); assert.match(nmark(m), /^sent 20/); assert.equal(m.sheet.g[0].at(-1), 'Owner notified'); assert.equal(m.sheet.g[0].length, NH.length + 1);
+  });
+  ok('notifyOwners: a lead without a phone shows "Phone: -" and a multi-line value cannot add lines', () => {
+    const m = nload([lead({ phone: '', name: 'Bo Li' }), lead({ phone: '1\r\nBcc: x@y.com', name: 'Cy Do' })]); m.run('notifyOwners()');
+    assert.match(m.calls.sent[0].text, /\nPhone: -\n/); assert.match(m.calls.sent[1].text, /\nPhone: 1 Bcc: x@y.com\n/);
   });
   ok('notifyOwners: the Owner cell wins, then the routed owner; unknown routing ("Check with Petros") goes to Petros', () => {
     const m = nload([lead({ owner: 'Panagiotis' }), lead({ owner: '', routed: 'Panagiotis', name: 'Bo Li' }), lead({ owner: '', routed: 'Check with Petros', name: 'Cy Do' }), lead({ owner: 'George Karavokyris', name: 'Di Er' })]);

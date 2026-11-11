@@ -368,7 +368,7 @@ function notifyPlan_(at, row, gid, testTo) {
   const first = name.split(' ')[0] || '(no name)';
   const link = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/edit#gid=' + gid + '&range=A' + row;
   return { send: true, to: isTest ? GEORGE : address, subject: 'New Web Summit lead: ' + first + ' ' + company,
-    text: ['Name: ' + first, 'Company: ' + company, 'Business type: ' + oneLine_(at('Which best describes you?'), 120), 'Score: ' + score + ' (' + band + ')',
+    text: ['Name: ' + (name || '-'), 'Company: ' + company, 'Email: ' + (oneLine_(at('Work email'), 120) || '-'), 'Phone: ' + (oneLine_(at('Phone'), 40) || '-'), 'Business type: ' + oneLine_(at('Which best describes you?'), 120), 'Score: ' + score + ' (' + band + ')',
       'Product: ' + product, 'Spoke with: ' + (oneLine_(at('Spoke with'), 60) || '-'), '', 'Sheet row: ' + link].concat(isTest ? ['', 'Test lead: this would have gone to ' + owner + '.'] : []).join('\n') };
 }
 
