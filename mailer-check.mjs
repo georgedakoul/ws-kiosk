@@ -228,9 +228,9 @@ if (WS) {
     const log = m.calls.log.join('\n'); assert.match(log, /row 2: would send to petros@renfluence.com/); assert.match(log, /row 3: would skip: test lead/); assert.match(log, /row 4: would skip: no address for owner Theo/);
     assert.ok(!/Ana|Silva|Hotel Lisboa|ana@hotel|Bo\b|Cy Do/.test(log));
   });
-  ok('installNotifyTrigger makes one 1-minute trigger that does not stack, leaves the thank-you trigger alone, removeNotifyTrigger removes only its own', () => {
+  ok('installNotifyTrigger makes one 5-minute trigger that does not stack, leaves the thank-you trigger alone, removeNotifyTrigger removes only its own', () => {
     const m = load(); m.run('installTrigger()'); m.run('installNotifyTrigger()'); m.run('installNotifyTrigger()');
-    assert.deepEqual(m.calls.triggers.map((t) => [t.getHandlerFunction(), t.n]), [['sendPending', 5], ['notifyOwners', 1]]);
+    assert.deepEqual(m.calls.triggers.map((t) => [t.getHandlerFunction(), t.n]), [['sendPending', 5], ['notifyOwners', 5]]);
     m.run('removeNotifyTrigger()'); assert.deepEqual(m.calls.triggers.map((t) => t.getHandlerFunction()), ['sendPending']); m.run('removeTrigger()'); m.run('installNotifyTrigger()'); m.run('removeTrigger()'); assert.equal(m.calls.triggers.length, 1);
   });
   ok('the owner table has the four owners the capture script knew, all on renfluence.com', () => {

@@ -3,7 +3,7 @@
 // Per row without a «Thank-you sent» marker: validate the address, write the marker BEFORE sending, send, write the result. Never twice, and a failed send is not retried.
 // Editor functions: dryRun() (logs what would be sent per row, row numbers only, sends nothing), sendTestMail() (one mail to GEORGE only), installTrigger() / removeTrigger() (every 5 minutes).
 // Second job, notifyOwners(): a short mail to the lead's owner (Petros, Panagiotis...) from this same mailbox, once per lead, so the lead notification never leaves George's mailbox.
-// Own flag NOTIFY_OWNERS, own trigger (installNotifyTrigger, every minute), own marker column «Owner notified». dryRunNotify() logs what it would send.
+// Own flag NOTIFY_OWNERS, own trigger (installNotifyTrigger, every 5 minutes), own marker column «Owner notified». dryRunNotify() logs what it would send.
 // The pure parts (plan_, deliver_, fill_, validAddress_, leadOf_, notifyPlan_, notifyDeliver_) are checked by mailer-check.mjs.
 const SEND_THANK_YOU = true;
 const SHEET_ID = '1gL3qWTlDSQkDGJT86B1mW1s3vtEy46-YD_zRfXsbxJE'; // Web Summit 2026 leads (the Form responses Sheet); this account needs Editor access (the marker column is written there)
@@ -17,7 +17,7 @@ const MARK = 'Thank-you sent'; // Sheet column, added at the right on the first 
 const DAILY_CAP = 300; // thank-yous per day (Workspace allows 1500 recipients a day)
 const PER_RUN = 40; // rows per run, well inside Apps Script's 6 minutes
 const NOTIFY_OWNERS = true; // false: notifyOwners() does nothing
-const NOTIFY_FIRST_ROW = 14; // rows above this are never notified: set at deployment to the first row the capture script's old owner mail did not cover (the Sheet's last row + 1 on the day the old mail was removed)
+const NOTIFY_FIRST_ROW = 13; // rows above this are never notified: the first row after the last old lead (12, 11 Nov). The Form inserts a new lead right under the last lead (not at the sheet's end) and pushes the hand-typed name-only rows down, so the next lead is row 13. Re-check if rows above it are ever inserted or deleted
 const OWNER_MARK = 'Owner notified'; // Sheet column, added at the right on the first notification. Empty = never tried; anything else = tried once, never again
 // Copied from sheet-owner.gs (the owner table the capture script used). An owner that is not here gets no mail: the row is marked and logged.
 const OWNER_EMAIL = {
@@ -400,7 +400,7 @@ function notifyRows_(sh) {
     at: (h) => (heads.includes(h) ? String(r[heads.indexOf(h)]) : ''), stamped: heads.includes('Timestamp') && String(r[heads.indexOf('Timestamp')]).trim() !== '' })).filter((r) => r.stamped); // by header: Timestamp is column F since the 11 Nov reorder
 }
 
-// The time trigger runs this (every minute). With NOTIFY_OWNERS false it does nothing.
+// The time trigger runs this (every 5 minutes). With NOTIFY_OWNERS false it does nothing.
 function notifyOwners() {
   if (NOTIFY_OWNERS !== true) { console.log('NOTIFY_OWNERS is false: nothing sent'); return; }
   assertSender_();
@@ -434,5 +434,5 @@ function dryRunNotify() {
   console.log('summary: ' + JSON.stringify(tally));
 }
 
-function installNotifyTrigger() { removeNotifyTrigger(); ScriptApp.newTrigger('notifyOwners').timeBased().everyMinutes(1).create(); }
+function installNotifyTrigger() { removeNotifyTrigger(); ScriptApp.newTrigger('notifyOwners').timeBased().everyMinutes(5).create(); }
 function removeNotifyTrigger() { ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === 'notifyOwners').forEach((t) => ScriptApp.deleteTrigger(t)); }
