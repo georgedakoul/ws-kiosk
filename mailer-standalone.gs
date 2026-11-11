@@ -397,7 +397,7 @@ function notifyRows_(sh) {
   const heads = heads_(sh), last = sh.getLastRow(), m = heads.indexOf(OWNER_MARK);
   if (last < NOTIFY_FIRST_ROW) return [];
   return sh.getRange(NOTIFY_FIRST_ROW, 1, last - NOTIFY_FIRST_ROW + 1, heads.length).getValues().map((r, i) => ({ row: NOTIFY_FIRST_ROW + i, marker: m < 0 ? '' : String(r[m]).trim(),
-    at: (h) => (heads.includes(h) ? String(r[heads.indexOf(h)]) : ''), stamped: String(r[0]).trim() !== '' })).filter((r) => r.stamped);
+    at: (h) => (heads.includes(h) ? String(r[heads.indexOf(h)]) : ''), stamped: heads.includes('Timestamp') && String(r[heads.indexOf('Timestamp')]).trim() !== '' })).filter((r) => r.stamped); // by header: Timestamp is column F since the 11 Nov reorder
 }
 
 // The time trigger runs this (every minute). With NOTIFY_OWNERS false it does nothing.

@@ -163,9 +163,9 @@ ok('no trial length in any mail: no "trial", "15 days" or "30 days" in text or H
 });
 // Owner notification (Renfluence only): the lead mail to Petros and the others, sent from the info@ mailbox, never from George's.
 if (WS) {
-  const NH = ['Timestamp', 'Which best describes you?', 'Full name', 'Company', 'Work email', 'Consent', 'Tablet', 'Spoke with', 'Score', 'Band', 'Product', 'Routed owner', 'Owner', 'Thank-you sent'];
+  const NH = ['Full name', 'Company', 'Work email', 'Product', 'Timestamp', 'Which best describes you?', 'Consent', 'Tablet', 'Spoke with', 'Score', 'Band', 'Routed owner', 'Owner', 'Thank-you sent']; // the live Sheet's order since 11 Nov: Timestamp is not column A
   const lead = (o = {}) => { const d = { ts: 't', type: 'Agency (creative, social, media or influencer)', name: 'Ana Silva', company: 'Hotel Lisboa', email: 'ana@hotel.pt', consent: 'I agree', tablet: 'T1', who: 'Theo', score: 77, band: 'Hot', product: 'Partnership', routed: 'Petros', owner: 'Petros', ty: '', ...o };
-    return [d.ts, d.type, d.name, d.company, d.email, d.consent, d.tablet, d.who, d.score, d.band, d.product, d.routed, d.owner, d.ty]; };
+    return [d.name, d.company, d.email, d.product, d.ts, d.type, d.consent, d.tablet, d.who, d.score, d.band, d.routed, d.owner, d.ty]; };
   const nload = (rows, o = {}) => load({ rows, head: NH, ...o });
   const nmark = (m, i = 0) => m.sheet.g[1 + i][m.sheet.g[0].indexOf('Owner notified')] ?? '';
   ok('notifyOwners: one short mail from the info@ mailbox to the owner, first name only, marker written BEFORE the send, once', () => {
@@ -208,8 +208,8 @@ if (WS) {
     const m = nload([lead(), lead({ name: 'Bo Li' })], { failSend: true }); m.run('notifyOwners()');
     assert.match(nmark(m, 0), /^failed 20.*boom/); assert.match(nmark(m, 1), /^failed/); const k = m.calls.sent.length; m.run('notifyOwners()'); assert.equal(m.calls.sent.length, k);
   });
-  ok('notifyOwners: a company with line breaks cannot break the subject into headers; a blank row is ignored', () => {
-    const m = nload([lead({ company: 'Evil\r\nBcc: x@y.com   Ltd' }), lead({ ts: '', name: '', company: '' })]); m.run('notifyOwners()');
+  ok('notifyOwners: a company with line breaks cannot break the subject into headers; a name-only row (no Timestamp, like the hand-typed rows under the live leads) is ignored', () => {
+    const m = nload([lead({ company: 'Evil\r\nBcc: x@y.com   Ltd' }), lead({ ts: '', name: 'Diogo Torres', company: 'Coframe.pt', email: '' })]); // formulas filled on purpose: only the Timestamp check keeps this row out m.run('notifyOwners()');
     assert.equal(m.calls.sent.length, 1); assert.ok(!/[\r\n]/.test(m.calls.sent[0].subject)); assert.equal(m.calls.sent[0].subject, 'New Web Summit lead: Ana Evil Bcc: x@y.com Ltd'); assert.equal(nmark(m, 1), '');
   });
   ok('notifyOwners: NOTIFY_OWNERS false does nothing and touches nothing; another account throws and sends nothing', () => {
