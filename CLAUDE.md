@@ -27,6 +27,13 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
   Both post as one answer to the extra Form question «Other markets» (`entry.496172218`, optional, same section as Q4), list then
   text per open group, comma-joined, never to Q4's own checkbox, so the Sheet's scoring still reads Q4 as before. In the leads
   Sheet the column sits after «Tablet» and before «Score».
+- **Leads Sheet layout (reordered by Petros, 11 Nov; checked live with a TEST lead the same day).** Tab Leads, A to AD: A Full name, B What is your
+  role?, C Company, D Work email, E Product (formula), F Timestamp, G..W the remaining answers in Form order (G Q1, H Q3, I Q4, J Q5, K Q6, L Which
+  platform?, M..O the three Q7 wordings, P Q8, Q Phone, R Consent, S Tablet, T Other markets, U Q1 other text, V Q2 other text, W Spoke with), then
+  X Score, Y Band, Z Routed owner (formulas), AA Owner, AB Status, AC Note, AD Thank-you sent. The Form writes into the same header names, so the mapping
+  holds; the formulas read F for the timestamp. **Timestamp is no longer column A**: scripts must find columns by header, never by position (the
+  `index.html` `COLUMNS` order, so the archive and CSV, is still the Form's old order with Timestamp first, and does not match the Sheet). The Form
+  writes into the first empty row, so rows added by hand without a timestamp (the name-only rows under the live leads) sit between submissions. Open: `notifyOwners` in `mailer-standalone.gs` still takes column A (`r[0]`) as the timestamp, so after the reorder it counts name-only rows as leads.
 - Q1 and Q2 «Something else» open an optional text field (`ask`). The Form's «Something else» is a plain option with no free-text
   response, so the typed text posts to two extra optional short-answer Form questions at the end of the details section, «Q1 other text»
   (`entry.415824857`) and «Q2 other text» (`entry.1228148969`). Q1 and Q2 themselves still post only their option. In the leads Sheet
@@ -49,7 +56,7 @@ One static `index.html`, no build, served by GitHub Pages at https://georgedakou
 - Details screen: «Who did you speak with at our booth?» (`who`, `#f-who`) sits after the email field: five `.opt` buttons (Petros, Panagiotis,
   Giorgos, Karavokyris, Theo), optional, one choice, tap again to deselect, wording keys `who` and `who.<name>`. It posts the fixed name (`data-w`)
   to the Form's last question «Spoke with» (short answer, `entry.1189592180`, details section, so `pageHistory` is unchanged); untouched posts
-  nothing. In the leads Sheet it is column V (after «Q2 other text», before «Score»); archive and CSV use the same order. The Form puts a new
+  nothing. In the leads Sheet it is column W (after «Q2 other text», before «Score»); the archive and CSV keep the Form's order (see the Sheet layout bullet). The Form puts a new
   question's column before the formula columns, which follow it (checked: Score, Band, Product, Routed owner formulas and values unchanged).
 - `sheet-owner.gs` is the Apps Script bound to the Sheet. `install()` creates the `onFormSubmit` trigger: it sets Owner from Routed owner when
   empty and sends **no mail**. The owner notification is `notifyOwners()` in the info@ mailer («Thank-you mailer (live)» below), so nothing
