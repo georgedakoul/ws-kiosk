@@ -1,7 +1,7 @@
 // End-to-end check in headless Chrome: every screen on common tablet and phone sizes in both orientations
 // (screenshots plus a layout audit), the Q7 and thank-you rules, the thank-you reset (no idle reset), the lead archive
 // and CSV export, private-mode storage, the offline queue, the wording Sheet (stubbed CSV: edited label, unchanged post, cache,
-// blank cell, error page), Q4's "Other in Europe" and "Elsewhere" lists, the optional «Something else» text on Q1 and Q2 and the optional «Who did you speak with» on the details screen.
+// blank cell, error page), Q4's "Other in Europe" and "Elsewhere" lists, the optional «Something else» text on Q1 and Q2, the optional «Who did you speak with» on the details screen and its remembered default (preselected, explicit, cleared, ?export field).
 // Usage: node check.mjs [page-url] [screenshot-dir]
 // By default formResponse is intercepted and answered locally. LIVE=1 lets the offline-queue submission
 // (name "TEST Koulouris kiosk offline", tablet "TEST") through to the real Google Form: one row in the Sheet,
@@ -80,9 +80,9 @@ function audit() {
     // A text field holding more than it can show is normal, so inputs are left out.
     if (el.tagName !== 'INPUT' && cs.overflowX !== 'visible' && el.scrollWidth > el.clientWidth + 1) bad.push('scrolls sideways: ' + name(el));
     if (el.tagName === 'BUTTON' && el.scrollWidth > el.clientWidth + 1) bad.push('text overflows: ' + name(el));
-    const target = el.matches('button:not([disabled]), input:not([type=checkbox]), .consent');
+    const target = el.matches('button:not([disabled]), input:not([type=checkbox]), select, .consent');
     if (target && (r.height < 40 || r.width < 40)) bad.push('tiny target ' + Math.round(r.width) + 'x' + Math.round(r.height) + ': ' + name(el));
-    if ([...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && !el.closest('#dot, #device') && parseFloat(cs.fontSize) < 11) bad.push('text under 11px: ' + name(el));
+    if ([...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && !el.closest('#dot, #device, #spoke') && parseFloat(cs.fontSize) < 11) bad.push('text under 11px: ' + name(el));
     if (el.matches('#start, #next, #back, #details-back, #details button[type=submit], #next-visitor, #x-csv, #x-retry') && (r.top < -1 || r.bottom > H + 1)) bad.push('button off screen: ' + name(el));
   }
   const rect = (sel) => document.querySelector('.screen:not([hidden]) ' + sel)?.getBoundingClientRect();
@@ -276,13 +276,18 @@ try {
     await js(`document.querySelector('#f-consent').checked = true`); await js(`document.querySelectorAll('.bad').forEach(e => e.classList.remove('bad'))`);
     await js(`document.querySelectorAll('.err').forEach(e => e.textContent = '')`);
     await snap(tag, `${tag}-13-details-filled`);
+    await click('#f-remember'); await snap(tag, `${tag}-13b-details-default-set`); await click('#who-clear'); // the default row goes through the audit too
+    assert.equal(await js(`localStorage.getItem('ws-kiosk-spokewith')`), null, tag + ': Clear default empties it');
     await click('#details button[type=submit]'); await snap(tag, `${tag}-14-thank-you`);
     expected++;
     assert.equal((await archive()).length, expected, tag + ': the archive grows on every submit');
     // The team screen on the same size.
     await go(PAGE + '?export');
     assert.deepEqual(await js(`({ screen: ['welcome','export'].find(id => !document.getElementById(id).hidden), n: document.getElementById('x-archived').textContent })`), { screen: 'export', n: String(expected) });
+    await js(`document.getElementById('x-spoke').value = 'Panagiotis'; document.getElementById('x-spoke').dispatchEvent(new Event('change'))`);
     await snap(tag, `${tag}-15-export`);
+    await go(PAGE); await snap(tag, `${tag}-16-welcome-spoke`); // the small «Spoke with» tag beside the tablet name
+    await js(`localStorage.removeItem('ws-kiosk-spokewith')`);
     console.log(tag.padEnd(10), problems.some((p) => p.startsWith(tag + ' ')) ? 'PROBLEMS' : 'ok', scrollsOn.has(tag) ? '(scrolls inside: ' + scrollsOn.get(tag).join(', ') + ')' : '(fits without scrolling)');
   }
   problems.forEach((p) => console.log('  ' + p));
@@ -360,10 +365,11 @@ try {
     await fill('#f-name', name); await fill('#f-company', 'Check Co'); await fill('#f-email', 'open.ended@example.com');
     for (const w of who) await click(`#f-who [data-w="${w}"]`); // each tap in order: another name replaces the first, the same one deselects
     await js(`document.querySelector('#f-consent').checked = true`);
+    const shown = await js(`[...document.querySelectorAll('#f-who [aria-pressed=true]')].map((b) => b.dataset.w)`);
     await click('#details button[type=submit]');
     assert.equal(await visible(), 'thanks', 'Send works with or without a name');
     const r = (await archive()).at(-1);
-    return { r, b: new URLSearchParams(r.body) };
+    return { r, b: new URLSearchParams(r.body), shown };
   }
   // Elsewhere alone, then with Other in Europe: one comma-joined «Other markets», Q4's own checkbox untouched.
   let v = await visit('Elsewhere Only', { q4: ['Elsewhere', 'Brazil', 'Africa'], q4text: { '#q-elsewhere-text': 'Chile' } });
@@ -417,6 +423,81 @@ try {
       keys: ['who', 'optional', 'who.petros', 'who.panagiotis', 'who.giorgos', 'who.karavokyris', 'who.theo'] });
   assert.equal(await js(`t('who')`), 'Who did you speak with at our booth?');
   console.log('who: ok (after email, optional, single choice, deselect, posts to its own entry)');
+
+  // The remembered name: empty on a fresh (visitor) device, set explicitly by a team member, then preselected and visible on every lead.
+  const SPOKE = 'ws-kiosk-spokewith';
+  const pressed = () => js(`[...document.querySelectorAll('#f-who [aria-pressed=true]')].map((b) => b.dataset.w)`);
+  const remember = () => js(`({ on: document.getElementById('f-remember').getAttribute('aria-pressed'), off: document.getElementById('f-remember').disabled,
+    row: !document.getElementById('who-default').hidden, text: document.getElementById('who-default-text').textContent, stored: localStorage.getItem('${SPOKE}') })`);
+  const badge = () => js(`({ hidden: document.getElementById('spoke').hidden, text: document.getElementById('spoke').textContent })`);
+  await js(`localStorage.removeItem('${SPOKE}')`);
+  await go(PAGE);
+  assert.deepEqual(await badge(), { hidden: true, text: '' }, 'a visitor tablet shows no name');
+  await click('#start'); await js(`show('details')`);
+  assert.deepEqual([await pressed(), await remember()], [[], { on: 'false', off: true, row: false, text: '', stored: null }], 'nothing is preselected and nothing is remembered');
+  v = await visit('Default None', {});
+  assert.deepEqual([v.shown, v.b.getAll(WHO_ENTRY)], [[], []], 'no default: nothing selected, nothing posted');
+  // A team member picks a name and sets it as the default.
+  await go(PAGE); await click('#start'); await js(`show('details')`);
+  await click('#f-who [data-w="Giorgos"]');
+  assert.deepEqual(await remember(), { on: 'false', off: false, row: false, text: '', stored: null }, 'choosing a name alone remembers nothing');
+  await click('#f-remember');
+  assert.deepEqual(await remember(), { on: 'true', off: false, row: true, text: 'Next leads start with Giorgos', stored: 'Giorgos' });
+  // After a reload: shown on the welcome screen, preselected and visibly selected on the next lead, posted.
+  await go(PAGE);
+  assert.deepEqual(await badge(), { hidden: false, text: 'Spoke with: Giorgos' });
+  v = await visit('Default Giorgos', {});
+  assert.deepEqual([v.shown, v.b.getAll(WHO_ENTRY), v.r.answers['Spoke with']], [['Giorgos'], ['Giorgos'], 'Giorgos'], 'preselected, visible and posted');
+  assert.equal(v.b.get('pageHistory'), '0,1,2,3,4,5,6,8,9,10', 'the sections are unchanged');
+  // The next visitor (no reload) is preselected too, and a changed name for one lead leaves the default alone.
+  await click('#next-visitor'); await click('#start'); await js(`show('details')`);
+  assert.deepEqual(await pressed(), ['Giorgos'], 'Next visitor keeps the default');
+  v = await visit('Default Switch', { who: ['Petros'] });
+  assert.deepEqual([v.shown, v.b.getAll(WHO_ENTRY)], [['Petros'], ['Petros']], 'one tap changes the name');
+  assert.equal(await js(`localStorage.getItem('${SPOKE}')`), 'Giorgos', 'and does not change the default');
+  v = await visit('Default Deselect', { who: ['Giorgos'] });
+  assert.deepEqual([v.shown, v.b.getAll(WHO_ENTRY), v.r.answers['Spoke with']], [[], [], ''], 'tapping the preselected name clears it for this lead: nothing posted');
+  assert.equal(await js(`localStorage.getItem('${SPOKE}')`), 'Giorgos');
+  // A name cleared by tap stays cleared when the person goes Back and forward again; a new visit is preselected again.
+  await go(PAGE); await click('#start'); await js(`show('details')`);
+  await click('#f-who [data-w="Giorgos"]');
+  await js(`show('question'); show('details')`);
+  assert.deepEqual(await pressed(), [], 'a cleared name is not preselected again on the same lead');
+  await js(`reset()`); await click('#start'); await js(`show('details')`);
+  assert.deepEqual(await pressed(), ['Giorgos'], 'the next lead starts from the default');
+  // Pressing the remembered name's button again unsets the default (the lead keeps its name); the tag and the preselection are gone.
+  assert.equal((await remember()).on, 'true');
+  await click('#f-remember');
+  assert.deepEqual([await remember(), await pressed()], [{ on: 'false', off: false, row: false, text: '', stored: null }, ['Giorgos']], 'the lead still shows and posts its name');
+  await js(`reset()`); await click('#start'); await js(`show('details')`);
+  assert.deepEqual(await pressed(), [], 'no default any more');
+  // Clear default: next to the buttons while a default exists, even when another name is chosen.
+  await js(`spoke('Theo'); reset(); show('details')`);
+  assert.deepEqual([await pressed(), (await remember()).row], [['Theo'], true]);
+  await click('#f-who [data-w="Petros"]');
+  assert.equal((await remember()).on, 'false', 'the button is only pressed while the default is the chosen name');
+  await click('#who-clear');
+  assert.deepEqual([await remember(), await pressed()], [{ on: 'false', off: false, row: false, text: '', stored: null }, ['Petros']]);
+  // ?export: change or clear it, like the tablet name. A stored name that is not one of the five is ignored.
+  await go(PAGE + '?export');
+  assert.deepEqual(await js(`[...document.getElementById('x-spoke').options].map((o) => o.value)`), ['', 'Petros', 'Panagiotis', 'Giorgos', 'Karavokyris', 'Theo']);
+  await js(`document.getElementById('x-spoke').value = 'Karavokyris'; document.getElementById('x-spoke').dispatchEvent(new Event('change'))`);
+  assert.equal(await js(`localStorage.getItem('${SPOKE}')`), 'Karavokyris');
+  await go(PAGE + '?export');
+  assert.equal(await js(`document.getElementById('x-spoke').value`), 'Karavokyris', 'the export field shows the stored name');
+  await go(PAGE);
+  assert.equal((await badge()).text, 'Spoke with: Karavokyris');
+  await go(PAGE + '?export');
+  await js(`document.getElementById('x-spoke').value = ''; document.getElementById('x-spoke').dispatchEvent(new Event('change'))`);
+  assert.equal(await js(`localStorage.getItem('${SPOKE}')`), null, 'clearing in ?export empties it');
+  await js(`localStorage.setItem('${SPOKE}', 'Mallory')`);
+  await go(PAGE); await click('#start'); await js(`show('details')`);
+  assert.deepEqual([(await badge()).hidden, await pressed()], [true, []], 'an unknown stored name is ignored');
+  await js(`localStorage.removeItem('${SPOKE}')`);
+  // The new strings are wording keys with a default.
+  assert.deepEqual(await js(`['who.remember', 'who.clear', 'who.badge', 'who.default'].map((k) => [k, t(k)])`),
+    [['who.remember', 'Remember my choice'], ['who.clear', 'Clear default'], ['who.badge', 'Spoke with: {name}'], ['who.default', 'Next leads start with {name}']]);
+  console.log('who default: ok (empty on a visitor tablet, set explicitly, preselected and visible, posted, cleared, export field)');
 
   // Petros's doc (Lisbon kiosk: qualification questionnaire). The posted values are the live Google Form's option texts, so Q2 and Q5's
   // first option keep the Form's wording here, and the doc's casing and «content mix» wording come from the Kiosk κείμενα Sheet.
@@ -509,19 +590,23 @@ try {
   await go(PAGE);
   console.log('texts: new text only on welcome, offline uses cache, error page and blank cell fall back');
 
-  // No idle reset: answers and inputs survive well past the old 90 s (clock jumped forward, then the tick runs).
+  // No idle reset on any questionnaire screen: the clock jumps an hour, then typed text, taps and the email are still there.
+  // The only auto reset is the thank-you one (deadline 0 everywhere else).
   await go(PAGE);
-  await click('#start'); await tap('Agency');
-  await js(`Date.now = ((n) => () => n() + 200000)(Date.now)`);
+  await click('#start'); await tap('Something else'); await fill('#q-text', 'Podcaster'); await input('#q-text');
+  await js(`Date.now = ((n) => () => n() + 3600000)(Date.now)`);
   await sleep(1000);
   assert.equal(await visible(), 'question');
-  assert.equal(await js(`document.querySelectorAll('.opt[aria-pressed=true]').length`), 1);
+  assert.deepEqual(await js(`[document.querySelectorAll('.opt[aria-pressed=true]').length, document.querySelector('#q-text').value, answers.typeOther, step, deadline]`), [1, 'Podcaster', 'Podcaster', 0, 0]);
   await js(`answers = { type: ['Agency (creative, social, media or influencer)'] }; show('details')`);
-  await fill('#f-name', 'Idle Person'); await js(`document.querySelector('#f-consent').checked = true`);
+  await fill('#f-name', 'Idle Person'); await fill('#f-email', 'idle@example.com'); await js(`document.querySelector('#f-consent').checked = true`);
+  await js(`Date.now = ((n) => () => n() + 3600000)(Date.now)`);
   await sleep(1000);
   assert.equal(await visible(), 'details');
-  assert.deepEqual(await js(`[document.querySelector('#f-name').value, document.querySelector('#f-consent').checked]`), ['Idle Person', true]);
-  console.log('no idle reset: ok');
+  assert.deepEqual(await js(`[document.querySelector('#f-name').value, document.querySelector('#f-email').value, document.querySelector('#f-consent').checked, deadline]`), ['Idle Person', 'idle@example.com', true, 0]);
+  await js(`show('welcome')`); // the welcome screen has no timer either
+  assert.equal(await js(`deadline`), 0);
+  console.log('no idle reset: ok (an hour on a question and on the details screen, nothing lost)');
 
   // Thank-you screen. The lead is queued and archived before it shows, so a reload there loses nothing.
   // The network is down for this part, so the queue cannot drain on its own.
@@ -629,6 +714,7 @@ try {
       bg: getComputedStyle(document.getElementById('storage-warn')).backgroundColor, screen })`),
       { hidden: false, text: 'Private mode: leads are not saved on this device', bg: 'rgb(200, 40, 60)', screen: 'welcome' }, mode);
     await shot('private-mode-' + mode.replace(' ', '-'));
+    assert.deepEqual(await js(`[spoke('Theo'), spoke(), spoke(''), spoke()]`), ['Theo', 'Theo', '', ''], mode + ': the default is kept for this page');
     assert.equal((await js(`(${audit})()`)).bad.length, 0);
     offline = true;
     await lead({ name: 'Private Mode' });

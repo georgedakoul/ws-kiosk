@@ -137,6 +137,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .fields { align-content: start; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem 1.2rem; grid-auto-flow: row dense; }
 .who-field { grid-column: 1 / -1; }
 .who-field .options.compact { grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); } /* 3 across (then 2) on a tablet: Karavokyris needs 9.5rem */
+.who-field .options.who-remember { grid-template-columns: minmax(0, 1fr); max-width: 17rem; margin-top: 0.1rem; }
+.who-default { display: flex; align-items: center; flex-wrap: wrap; gap: 0 0.5rem; }
+.who-default .small { max-width: none; }
 .consent { grid-column: 1 / -1; display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.8rem 0.9rem; border-radius: var(--r); background: var(--white); border: 2px solid var(--line); font-size: 0.95rem; }
 .consent input { width: 1.5rem; height: 1.5rem; flex: none; accent-color: var(--blue); margin-top: 0; }
 .consent.bad { border-color: var(--red); }
@@ -149,12 +152,13 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 /* Team-only screens */
 #storage-warn { position: absolute; top: 0; left: 0; right: 0; z-index: 2; padding: 0.5rem 1rem; background: var(--red); color: var(--white); font-size: 0.9rem; font-weight: 700; text-align: center; }
-#device { display: inline-block; margin-top: 0.8rem; padding: 2px 0.5rem; border-radius: 0.5rem; background: rgba(255,255,255,.88); color: var(--muted); font-size: 0.7rem; }
+#device, #spoke { display: inline-block; margin: 0.8rem 0.4rem 0 0; padding: 2px 0.5rem; border-radius: 0.5rem; background: rgba(255,255,255,.88); color: var(--muted); font-size: 0.7rem; }
 #device.unset { background: var(--amber); color: var(--ink); font-weight: 700; }
 #export { overflow-y: auto; padding: 2.4rem; gap: 1rem; align-items: flex-start; }
 #export h1 { font-size: 2rem; }
 #export p { max-width: 60ch; }
 #export .field { width: min(100%, 21rem); }
+#export .field select { width: 100%; height: 3.2rem; border-radius: var(--r); border: 2px solid var(--line); background: var(--white); padding: 0 0.9rem; font: inherit; font-size: 1.1rem; color: var(--ink); }
 #export .btn { min-width: 14rem; }
 #export .small { min-height: 1.5em; }
 
@@ -221,7 +225,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
       <div class="brand-tag" data-t="brand.tagline">Where Content Meets Clarity</div>
     </div>
     <div><p data-t="brand">Web Summit
-Lisbon 2026</p><span id="device"></span></div>
+Lisbon 2026</p><span id="device"></span><span id="spoke" hidden></span></div>
   </div>
   <div class="welcome-body">
     <div>
@@ -265,7 +269,9 @@ Lisbon 2026</p><span id="device"></span></div>
       <div class="field"><label for="f-name" data-t="details.name">Full name</label><input id="f-name" name="name" type="text" autocomplete="off" autocapitalize="words"><span class="err"></span></div>
       <div class="field"><label for="f-company" data-t="details.company">Company</label><input id="f-company" name="company" type="text" autocomplete="off"><span class="err"></span></div>
       <div class="field"><label for="f-email" data-t="details.email">Work email</label><input id="f-email" name="email" type="email" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="err"></span></div>
-      <div class="field who-field"><span class="lbl" id="who-label"><span data-t="who">Who did you speak with at our booth?</span> <span class="hint" data-t="optional">(optional)</span></span><div class="options compact" id="f-who" role="group" aria-labelledby="who-label"><button class="opt" type="button" data-w="Petros" aria-pressed="false"><span class="main" data-t="who.petros">Petros</span></button><button class="opt" type="button" data-w="Panagiotis" aria-pressed="false"><span class="main" data-t="who.panagiotis">Panagiotis</span></button><button class="opt" type="button" data-w="Giorgos" aria-pressed="false"><span class="main" data-t="who.giorgos">Giorgos</span></button><button class="opt" type="button" data-w="Karavokyris" aria-pressed="false"><span class="main" data-t="who.karavokyris">Karavokyris</span></button><button class="opt" type="button" data-w="Theo" aria-pressed="false"><span class="main" data-t="who.theo">Theo</span></button></div></div>
+      <div class="field who-field"><span class="lbl" id="who-label"><span data-t="who">Who did you speak with at our booth?</span> <span class="hint" data-t="optional">(optional)</span></span><div class="options compact" id="f-who" role="group" aria-labelledby="who-label"><button class="opt" type="button" data-w="Petros" aria-pressed="false"><span class="main" data-t="who.petros">Petros</span></button><button class="opt" type="button" data-w="Panagiotis" aria-pressed="false"><span class="main" data-t="who.panagiotis">Panagiotis</span></button><button class="opt" type="button" data-w="Giorgos" aria-pressed="false"><span class="main" data-t="who.giorgos">Giorgos</span></button><button class="opt" type="button" data-w="Karavokyris" aria-pressed="false"><span class="main" data-t="who.karavokyris">Karavokyris</span></button><button class="opt" type="button" data-w="Theo" aria-pressed="false"><span class="main" data-t="who.theo">Theo</span></button></div>
+        <div class="options compact multi who-remember"><button class="opt" type="button" id="f-remember" aria-pressed="false" disabled><span class="main" data-t="who.remember">Remember my choice</span></button></div>
+        <div class="who-default" id="who-default" hidden><span class="small" id="who-default-text"></span><button class="btn btn-ghost" type="button" id="who-clear" data-t="who.clear">Clear default</button></div></div>
       <div class="field"><label for="f-phone"><span data-t="details.phone">Phone</span> <span class="hint" data-t="optional">(optional)</span></label><input id="f-phone" name="phone" type="tel" autocomplete="off"><span class="err"></span></div>
       <label class="consent" id="consent-box"><input id="f-consent" name="consent" type="checkbox"><span data-t="details.consent">I agree that Renfluence may contact me about this conversation. My details won't be shared with anyone else.</span></label>
     </div>
@@ -290,6 +296,7 @@ Lisbon 2026</p><span id="device"></span></div>
   <div class="field"><label for="x-device">Όνομα tablet</label><input id="x-device" type="text" autocomplete="off" placeholder="Tablet 1 · Petros"></div>
   <button class="btn btn-primary" id="x-csv">Download CSV</button>
   <button class="btn btn-primary" id="x-retry">Retry sending now</button>
+  <div class="field"><label for="x-spoke">Προεπιλογή «Spoke with»</label><select id="x-spoke"><option value="">None</option></select></div>
   <p class="small" id="x-msg" role="status"></p>
 </section>
 
@@ -366,6 +373,9 @@ const DETAILS = { name: '810863017', company: '762619381', email: '1364327607', 
 const DEVICE_ENTRY = '938892717';
 // Short-answer question «Spoke with», last in the Form (details section). Optional: the posted value is the button's fixed name (data-w), never the editable wording.
 const WHO = { entry: '1189592180', column: 'Spoke with' };
+// The team's remembered name (set from the details screen or ?export). Preselected, and visible, on every new lead; empty on a visitor tablet until a team member sets it.
+const SPOKE_KEY = 'ws-kiosk-spokewith';
+const NAMES = [...document.querySelectorAll('#f-who .opt')].map((b) => b.dataset.w);
 
 // Sheet column order: Q1 to Q6, the inline platform, the three Q7 wordings, Q8, then the details.
 const COLUMNS = [
@@ -384,7 +394,7 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const split = (v) => { const m = v.match(/^(.*?) \((.*)\)$/); return m ? [m[1], m[2]] : [v]; }; // "Main (sub label)"
 const has = (list, prefix) => (list || []).some((v) => v.startsWith(prefix));
-let answers = {}, step = 0, screen = 'welcome', deadline = 0;
+let answers = {}, step = 0, screen = 'welcome', deadline = 0, whoTouched = false;
 
 // Petros's Q7 rule, checked in order: clients or resale, then government, then everyone else.
 function volumeKey(a) {
@@ -409,6 +419,9 @@ function show(name) {
   for (const id of ['welcome', 'question', 'details', 'thanks', 'export']) $('#' + id).hidden = id !== name;
   $('#device').textContent = device() ? device() : 'Tablet: not set';
   $('#device').className = device() ? '' : 'unset';
+  $('#spoke').hidden = !spoke();
+  $('#spoke').textContent = spoke() ? t('who.badge').replace('{name}', () => spoke()) : '';
+  if (name === 'details') { if (!whoTouched) answers.who = spoke() || undefined; paintWho(); }
   arm();
 }
 
@@ -423,7 +436,7 @@ setInterval(tick, 250);
 for (const ev of ['visibilitychange', 'pageshow', 'focus']) addEventListener(ev, tick);
 
 function reset() {
-  answers = {}; step = 0;
+  answers = {}; step = 0; whoTouched = false;
   $('#details').reset();
   paintWho();
   document.querySelectorAll('.bad').forEach((el) => el.classList.remove('bad'));
@@ -536,13 +549,26 @@ function back() {
 }
 
 // «Who did you speak with»: one name or none, tap again to deselect. Optional, never blocks Send.
-function paintWho() { document.querySelectorAll('#f-who .opt').forEach((b) => b.setAttribute('aria-pressed', b.dataset.w === answers.who)); }
+// The remembered name is preselected when the details screen opens (until the person touches the buttons) and is posted only as what
+// the buttons show. «Remember my choice» saves the selected name as the default (pressed = the default is the selected name); tapping it
+// again, «Clear default» or the ?export field removes it. Choosing another name for one lead leaves the default as it is.
+function paintWho() {
+  const s = spoke();
+  document.querySelectorAll('#f-who .opt').forEach((b) => b.setAttribute('aria-pressed', b.dataset.w === answers.who));
+  $('#f-remember').setAttribute('aria-pressed', !!s && s === answers.who);
+  $('#f-remember').disabled = !answers.who;
+  $('#who-default').hidden = !s;
+  $('#who-default-text').textContent = s ? t('who.default').replace('{name}', () => s) : '';
+}
 $('#f-who').onclick = (e) => {
   const b = e.target.closest('.opt');
   if (!b) return;
+  whoTouched = true;
   answers.who = answers.who === b.dataset.w ? undefined : b.dataset.w;
   paintWho();
 };
+$('#f-remember').onclick = () => { spoke(spoke() === answers.who ? '' : answers.who); paintWho(); };
+$('#who-clear').onclick = () => { spoke(''); paintWho(); };
 $('#next-visitor').onclick = reset;
 $('#start').onclick = () => { step = 0; renderQuestion(); show('question'); };
 $('#next').onclick = next;
@@ -618,6 +644,14 @@ let deviceMem = '';
 function device(v) {
   if (v !== undefined) { deviceMem = v; try { localStorage.setItem(DEVICE_KEY, v); } catch { /* private mode: kept for this page only */ } }
   try { return localStorage.getItem(DEVICE_KEY) ?? deviceMem; } catch { return deviceMem; }
+}
+// The remembered «Spoke with» name: one of the five buttons or empty. Read fresh each time, so ?export in another tab changes it.
+let spokeMem = '';
+function spoke(v) {
+  if (v !== undefined) { spokeMem = v; try { v ? localStorage.setItem(SPOKE_KEY, v) : localStorage.removeItem(SPOKE_KEY); } catch { /* private mode: kept for this page only */ } }
+  let s; try { s = localStorage.getItem(SPOKE_KEY); } catch { s = null; }
+  s = s ?? spokeMem;
+  return NAMES.includes(s) ? s : '';
 }
 // Submit time as ISO with the Athens offset, e.g. 2026-11-10T14:30:00+02:00 (the tablet's own clock, shown in Athens time).
 function athens(d = new Date()) {
@@ -706,6 +740,8 @@ const DEF = {
   'err.name': 'Please enter your name.',
   'err.company': 'Please enter your company.',
   'err.email': 'Please enter a valid email.',
+  'who.badge': 'Spoke with: {name}',
+  'who.default': 'Next leads start with {name}',
 };
 document.querySelectorAll('[data-t]').forEach((el) => (DEF[el.dataset.t] = el.textContent));
 for (const [k, v] of Object.entries(VOLUME_QUESTIONS)) DEF['volume.' + k] = v.title;
@@ -768,6 +804,9 @@ if (params.has('export')) {
   };
   $('#x-device').value = device();
   $('#x-device').oninput = (e) => device(e.target.value.trim());
+  NAMES.forEach((n) => $('#x-spoke').add(new Option(n, n)));
+  $('#x-spoke').value = spoke();
+  $('#x-spoke').onchange = (e) => spoke(e.target.value);
   $('#x-retry').onclick = async () => {
     exportView('Sending...');
     await flush();
