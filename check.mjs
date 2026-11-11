@@ -82,7 +82,7 @@ function audit() {
     if (el.tagName === 'BUTTON' && el.scrollWidth > el.clientWidth + 1) bad.push('text overflows: ' + name(el));
     const target = el.matches('button:not([disabled]), input:not([type=checkbox]), select, .consent');
     if (target && (r.height < 40 || r.width < 40)) bad.push('tiny target ' + Math.round(r.width) + 'x' + Math.round(r.height) + ': ' + name(el));
-    if ([...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && !el.closest('#dot, #device, #spoke') && parseFloat(cs.fontSize) < 11) bad.push('text under 11px: ' + name(el));
+    if ([...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && !el.closest('#dot, #spoke') && parseFloat(cs.fontSize) < 11) bad.push('text under 11px: ' + name(el));
     if (el.matches('#start, #next, #back, #details-back, #details button[type=submit], #next-visitor, #x-csv, #x-retry') && (r.top < -1 || r.bottom > H + 1)) bad.push('button off screen: ' + name(el));
   }
   const rect = (sel) => document.querySelector('.screen:not([hidden]) ' + sel)?.getBoundingClientRect();
@@ -194,8 +194,8 @@ try {
     await go(PAGE);
     assert.equal((await archive()).length, expected, tag + ': the archive survives a reload');
     assert.ok(await js('window.__persist') >= 1, 'navigator.storage.persist() is called on load');
-    assert.deepEqual(await js(`({ warn: document.getElementById('storage-warn').hidden, dev: document.getElementById('device').textContent, unset: document.getElementById('device').className })`),
-      { warn: true, dev: 'Tablet: not set', unset: 'unset' });
+    assert.deepEqual(await js(`({ warn: document.getElementById('storage-warn').hidden, dev: document.getElementById('device'), tablet: /tablet/i.test(document.getElementById('welcome').innerText) })`),
+      { warn: true, dev: null, tablet: false }); // no tablet tag on the welcome screen, not even «not set»
     await snap(tag, `${tag}-01-welcome`);
     // The light-blue tagline sits right under the logo, inside the blue panel, clear of the Web Summit text, and large bold text (3:1 is enough).
     assert.deepEqual(await js(`(() => { const t = document.querySelector('.brand-tag'), l = document.querySelector('.brand img').getBoundingClientRect(),
@@ -286,7 +286,7 @@ try {
     assert.deepEqual(await js(`({ screen: ['welcome','export'].find(id => !document.getElementById(id).hidden), n: document.getElementById('x-archived').textContent })`), { screen: 'export', n: String(expected) });
     await js(`document.getElementById('x-spoke').value = 'Panagiotis'; document.getElementById('x-spoke').dispatchEvent(new Event('change'))`);
     await snap(tag, `${tag}-15-export`);
-    await go(PAGE); await snap(tag, `${tag}-16-welcome-spoke`); // the small «Spoke with» tag beside the tablet name
+    await go(PAGE); await snap(tag, `${tag}-16-welcome-spoke`); // the small «Spoke with» tag, alone under the brand text
     await js(`localStorage.removeItem('ws-kiosk-spokewith')`);
     console.log(tag.padEnd(10), problems.some((p) => p.startsWith(tag + ' ')) ? 'PROBLEMS' : 'ok', scrollsOn.has(tag) ? '(scrolls inside: ' + scrollsOn.get(tag).join(', ') + ')' : '(fits without scrolling)');
   }
@@ -421,7 +421,7 @@ try {
     names: [...document.querySelectorAll('#f-who .opt')].map((b) => b.dataset.w + '=' + b.textContent), keys: [...document.querySelectorAll('#who-label [data-t], #f-who [data-t]')].map((e) => e.dataset.t) })`),
     { after: true, next: true, names: ['Petros=Petros', 'Panagiotis=Panagiotis', 'Giorgos=Giorgos', 'Karavokyris=Karavokyris', 'Theo=Theo'],
       keys: ['who', 'optional', 'who.petros', 'who.panagiotis', 'who.giorgos', 'who.karavokyris', 'who.theo'] });
-  assert.equal(await js(`t('who')`), 'Who did you speak with at our booth?');
+  assert.equal(await js(`t('who')`), 'Who did you speak with?');
   console.log('who: ok (after email, optional, single choice, deselect, posts to its own entry)');
 
   // The remembered name: empty on a fresh (visitor) device, set explicitly by a team member, then preselected and visible on every lead.
@@ -645,12 +645,12 @@ try {
   assert.equal(await js('queue().length'), 0);
   console.log('thank-you reset: ok (25 s, Next visitor, frozen timers, reload keeps the lead)');
 
-  // Device name: set once on ?export, kept in localStorage, shown small on the welcome screen.
+  // Device name: set once on ?export, kept in localStorage, never shown on the welcome screen.
   await go(PAGE + '?export');
   await fill('#x-device', 'Tablet 1 · Petros'); await input('#x-device');
   assert.equal(await js(`localStorage.getItem('ws-kiosk-device')`), 'Tablet 1 · Petros');
   await go(PAGE);
-  assert.deepEqual(await js(`({ dev: document.getElementById('device').textContent, unset: document.getElementById('device').className })`), { dev: 'Tablet 1 · Petros', unset: '' });
+  assert.deepEqual(await js(`({ dev: document.getElementById('device'), tablet: /tablet|Petros/i.test(document.getElementById('welcome').innerText) })`), { dev: null, tablet: false }, 'a named device shows no tablet text either');
   await shot('device-set-welcome');
 
   // Export: counts, the Retry button, and a CSV that Excel and Google Sheets open correctly.

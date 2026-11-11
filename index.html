@@ -152,8 +152,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 /* Team-only screens */
 #storage-warn { position: absolute; top: 0; left: 0; right: 0; z-index: 2; padding: 0.5rem 1rem; background: var(--red); color: var(--white); font-size: 0.9rem; font-weight: 700; text-align: center; }
-#device, #spoke { display: inline-block; margin: 0.8rem 0.4rem 0 0; padding: 2px 0.5rem; border-radius: 0.5rem; background: rgba(255,255,255,.88); color: var(--muted); font-size: 0.7rem; }
-#device.unset { background: var(--amber); color: var(--ink); font-weight: 700; }
+#spoke { display: inline-block; margin: 0.8rem 0.4rem 0 0; padding: 2px 0.5rem; border-radius: 0.5rem; background: rgba(255,255,255,.88); color: var(--muted); font-size: 0.7rem; }
 #export { overflow-y: auto; padding: 2.4rem; gap: 1rem; align-items: flex-start; }
 #export h1 { font-size: 2rem; }
 #export p { max-width: 60ch; }
@@ -225,7 +224,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
       <div class="brand-tag" data-t="brand.tagline">Where Content Meets Clarity</div>
     </div>
     <div><p data-t="brand">Web Summit
-Lisbon 2026</p><span id="device"></span><span id="spoke" hidden></span></div>
+Lisbon 2026</p><span id="spoke" hidden></span></div>
   </div>
   <div class="welcome-body">
     <div>
@@ -269,7 +268,7 @@ Lisbon 2026</p><span id="device"></span><span id="spoke" hidden></span></div>
       <div class="field"><label for="f-name" data-t="details.name">Full name</label><input id="f-name" name="name" type="text" autocomplete="off" autocapitalize="words"><span class="err"></span></div>
       <div class="field"><label for="f-company" data-t="details.company">Company</label><input id="f-company" name="company" type="text" autocomplete="off"><span class="err"></span></div>
       <div class="field"><label for="f-email" data-t="details.email">Work email</label><input id="f-email" name="email" type="email" autocomplete="off" autocapitalize="none" spellcheck="false"><span class="err"></span></div>
-      <div class="field who-field"><span class="lbl" id="who-label"><span data-t="who">Who did you speak with at our booth?</span> <span class="hint" data-t="optional">(optional)</span></span><div class="options compact" id="f-who" role="group" aria-labelledby="who-label"><button class="opt" type="button" data-w="Petros" aria-pressed="false"><span class="main" data-t="who.petros">Petros</span></button><button class="opt" type="button" data-w="Panagiotis" aria-pressed="false"><span class="main" data-t="who.panagiotis">Panagiotis</span></button><button class="opt" type="button" data-w="Giorgos" aria-pressed="false"><span class="main" data-t="who.giorgos">Giorgos</span></button><button class="opt" type="button" data-w="Karavokyris" aria-pressed="false"><span class="main" data-t="who.karavokyris">Karavokyris</span></button><button class="opt" type="button" data-w="Theo" aria-pressed="false"><span class="main" data-t="who.theo">Theo</span></button></div>
+      <div class="field who-field"><span class="lbl" id="who-label"><span data-t="who">Who did you speak with?</span> <span class="hint" data-t="optional">(optional)</span></span><div class="options compact" id="f-who" role="group" aria-labelledby="who-label"><button class="opt" type="button" data-w="Petros" aria-pressed="false"><span class="main" data-t="who.petros">Petros</span></button><button class="opt" type="button" data-w="Panagiotis" aria-pressed="false"><span class="main" data-t="who.panagiotis">Panagiotis</span></button><button class="opt" type="button" data-w="Giorgos" aria-pressed="false"><span class="main" data-t="who.giorgos">Giorgos</span></button><button class="opt" type="button" data-w="Karavokyris" aria-pressed="false"><span class="main" data-t="who.karavokyris">Karavokyris</span></button><button class="opt" type="button" data-w="Theo" aria-pressed="false"><span class="main" data-t="who.theo">Theo</span></button></div>
         <div class="options compact multi who-remember"><button class="opt" type="button" id="f-remember" aria-pressed="false" disabled><span class="main" data-t="who.remember">Remember my choice</span></button></div>
         <div class="who-default" id="who-default" hidden><span class="small" id="who-default-text"></span><button class="btn btn-ghost" type="button" id="who-clear" data-t="who.clear">Clear default</button></div></div>
       <div class="field"><label for="f-phone"><span data-t="details.phone">Phone</span> <span class="hint" data-t="optional">(optional)</span></label><input id="f-phone" name="phone" type="tel" autocomplete="off"><span class="err"></span></div>
@@ -417,8 +416,6 @@ function show(name) {
   screen = name;
   if (name === 'welcome') adopt();
   for (const id of ['welcome', 'question', 'details', 'thanks', 'export']) $('#' + id).hidden = id !== name;
-  $('#device').textContent = device() ? device() : 'Tablet: not set';
-  $('#device').className = device() ? '' : 'unset';
   $('#spoke').hidden = !spoke();
   $('#spoke').textContent = spoke() ? t('who.badge').replace('{name}', () => spoke()) : '';
   if (name === 'details') { if (!whoTouched) answers.who = spoke() || undefined; paintWho(); }
